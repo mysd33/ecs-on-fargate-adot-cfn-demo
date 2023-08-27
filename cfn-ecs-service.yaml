@@ -1,0 +1,232 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: ECS Service Template for CloudFormation Demo. Depends on cfn-vpc.yaml, cfn-sg.yaml, cfn-alb.yaml, cfn-ecs-cluster.yaml, cfn-ecs-task.yaml
+#Metadata: 
+
+Parameters: 
+  StackPrefix:
+    Description: Stack Resource Name Prefix
+    Type: String
+    Default: Demo
+  EnvironmentType:
+    Description: The environment type
+    Type: String
+    AllowedValues: ["Dev", "Staging", "Production"]
+    Default: Production
+  DeployType:
+    Description: ECS Deployment Controller Type
+    Type: String
+    AllowedValues: ["ECS", "CODE_DEPLOY", "EXTERNAL"]
+    Default: ECS
+  RollingUpdateMinimumHealthyPercent:    
+    Description: DeploymentConfiguration MinimumHealthyPercent for Rolling Update Quickly
+    Type: Number
+    Default: 0    
+
+Mappings:
+  BackendServiceMap:
+    Production:
+      "DesiredCount": 1
+      "ContainerName": "ecsdemo-backend-service"
+      "ContainerPort": 8080      
+    Staging:
+      "DesiredCount": 1
+      "ContainerName": "ecsdemo-backend-service"
+      "ContainerPort": 8080
+    Dev:
+      "DesiredCount": 1
+      "ContainerName": "ecsdemo-backend-service"
+      "ContainerPort": 8080
+  FrontendWebAppMap:
+    Production:
+      "DesiredCount": 1
+      "ContainerName" : "ecsdemo-frontend-app"
+      "ContainerPort" : 8080
+    Staging:
+      "DesiredCount": 1
+      "ContainerName" : "ecsdemo-frontend-app"
+      "ContainerPort" : 8080
+    Dev:
+      "DesiredCount": 1
+      "ContainerName" : "ecsdemo-frontend-app"
+      "ContainerPort" : 8080 
+  BatchAppMap:
+    Production:
+      "DesiredCount": 1
+      "ContainerName" : "ecsdemo-batch-app"
+      "ContainerPort" : 8080
+    Staging:
+      "DesiredCount": 1
+      "ContainerName" : "ecsdemo-batch-app"
+      "ContainerPort" : 8080
+    Dev:
+      "DesiredCount": 1
+      "ContainerName" : "ecsdemo-batch-app"
+      "ContainerPort" : 8080 
+
+Conditions: 
+  IsRollingUpdate: !Equals 
+    - !Ref DeployType
+    - ECS
+
+Resources: 
+  FrontendWebAppService:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: !Sub ${StackPrefix}-FrontendWebAppService
+      Cluster:
+        Fn::ImportValue: !Sub ${StackPrefix}-Frontend-ECSCluster
+      DesiredCount: !FindInMap [FrontendWebAppMap, !Ref EnvironmentType, DesiredCount]
+      HealthCheckGracePeriodSeconds: 60
+      TaskDefinition:
+        Fn::ImportValue: !Sub ${StackPrefix}-FrontendECS-TaskDefinition
+      LaunchType: FARGATE
+      LoadBalancers:
+        - ContainerName: !FindInMap [FrontendWebAppMap, !Ref EnvironmentType, ContainerName]
+          ContainerPort: !FindInMap [FrontendWebAppMap, !Ref EnvironmentType, ContainerPort]
+          TargetGroupArn:
+#            Fn::ImportValue: !Sub ${StackPrefix}-Frontend-TargetGroup
+            Fn::ImportValue: !Sub ${StackPrefix}-PubALB-DefaultTargetGroup
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+#          AssignPublicIp: ENABLED
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - Fn::ImportValue: !Sub ${StackPrefix}-PublicECSSecurityGroup-ID
+          Subnets:
+#            - Fn::ImportValue: !Sub ${StackPrefix}-PublicSubnetOneId
+#            - Fn::ImportValue: !Sub ${StackPrefix}-PublicSubnetTwoId
+            - Fn::ImportValue: !Sub ${StackPrefix}-PrivateSubnetOneId
+            - Fn::ImportValue: !Sub ${StackPrefix}-PrivateSubnetTwoId 
+      DeploymentController:
+        Type: !Ref DeployType
+      DeploymentConfiguration: !If
+        - IsRollingUpdate
+        - DeploymentCircuitBreaker:         
+            Enable: true
+            Rollback: true
+          MinimumHealthyPercent: !Ref RollingUpdateMinimumHealthyPercent
+        - !Ref AWS::NoValue
+      Tags:
+        - Key: Name
+          Value: !Sub ${StackPrefix}-FrontendWebAppService
+  BackendService:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: !Sub ${StackPrefix}-BackendService
+      Cluster:
+        Fn::ImportValue: !Sub ${StackPrefix}-Backend-ECSCluster
+      DesiredCount: !FindInMap [BackendServiceMap, !Ref EnvironmentType, DesiredCount]
+      HealthCheckGracePeriodSeconds: 60
+      TaskDefinition:
+        Fn::ImportValue: !Sub ${StackPrefix}-BackendECS-TaskDefinition
+      LaunchType: FARGATE
+      LoadBalancers:
+        - ContainerName: !FindInMap [BackendServiceMap, !Ref EnvironmentType, ContainerName]
+          ContainerPort: !FindInMap [BackendServiceMap, !Ref EnvironmentType, ContainerPort]
+          TargetGroupArn:
+#            Fn::ImportValue: !Sub ${StackPrefix}-Backend-TargetGroup
+            Fn::ImportValue: !Sub ${StackPrefix}-PrivALB-DefaultTargetGroup
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - Fn::ImportValue: !Sub ${StackPrefix}-PrivateECSSecurityGroup-ID
+          Subnets:
+            - Fn::ImportValue: !Sub ${StackPrefix}-PrivateSubnetOneId
+            - Fn::ImportValue: !Sub ${StackPrefix}-PrivateSubnetTwoId
+      DeploymentController:
+        Type: !Ref DeployType
+      DeploymentConfiguration: !If
+        - IsRollingUpdate
+        - DeploymentCircuitBreaker:         
+            Enable: true
+            Rollback: true
+          MinimumHealthyPercent: !Ref RollingUpdateMinimumHealthyPercent
+        - !Ref AWS::NoValue
+      Tags:
+        - Key: Name
+          Value: !Sub ${StackPrefix}-BackendService
+  BatchAppService:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: !Sub ${StackPrefix}-BatchAppService
+      Cluster:
+        Fn::ImportValue: !Sub ${StackPrefix}-Batch-ECSCluster
+      DesiredCount: !FindInMap [BatchAppMap, !Ref EnvironmentType, DesiredCount]      
+      TaskDefinition:
+        Fn::ImportValue: !Sub ${StackPrefix}-BatchECS-TaskDefinition
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - Fn::ImportValue: !Sub ${StackPrefix}-BatchECSSecurityGroup-ID          
+          Subnets:
+            - Fn::ImportValue: !Sub ${StackPrefix}-PrivateSubnetOneId
+            - Fn::ImportValue: !Sub ${StackPrefix}-PrivateSubnetTwoId 
+      # Batch App Rolling Update Support Only
+      DeploymentController:
+        Type: ECS
+      DeploymentConfiguration:        
+        DeploymentCircuitBreaker:         
+          Enable: true
+          Rollback: true
+        MinimumHealthyPercent: !Ref RollingUpdateMinimumHealthyPercent        
+      Tags:
+        - Key: Name
+          Value: !Sub ${StackPrefix}-BatchAppService
+Outputs:
+  FrontendWebAppService:
+    Description: Frontend ECS Service
+    Value: !Ref FrontendWebAppService
+    Export:
+      Name: !Sub ${StackPrefix}-FrontendWebAppService
+  FrontendWebAppServiceName:
+    Description: Frontend ECS Service Name
+    Value: !Sub ${StackPrefix}-FrontendWebAppService
+    Export:
+      Name: !Sub ${StackPrefix}-FrontendWebAppService-Name
+  FrontendWebAppServiceURI:
+    Description: Frontend Web Application URL
+    Value: 
+#      Fn::Join: 
+#        - ""
+#        - - "http://"
+#          - Fn::ImportValue: !Sub ${StackPrefix}-PubALB-DNS                
+#          - "/backend-for-frontend/index.html"
+      Fn::Join: 
+        - ""
+        - - "http://"
+          - Fn::ImportValue: !Sub ${StackPrefix}-PubALB-DNS          
+  BackendService:
+    Description: Backend ECS Service
+    Value: !Ref BackendService
+    Export:
+      Name: !Sub ${StackPrefix}-BackendService
+  BackendServiceName:
+    Description: Backend ECS Service Name
+    Value: !Sub ${StackPrefix}-BackendService
+    Export:
+      Name: !Sub ${StackPrefix}-BackendService-Name
+  BackendServiceURI:
+    Description: Backend Service URL
+    Value: 
+#      Fn::Join: 
+#        - ""
+#        - - "http://"
+#          - Fn::ImportValue: !Sub ${StackPrefix}-PrivALB-DNS                
+#          - "/backend/api/v1/users"
+      Fn::Join: 
+        - ""
+        - - "http://"
+          - Fn::ImportValue: !Sub ${StackPrefix}-PrivALB-DNS 
+  BatchAppService:
+    Description: Batch ECS Service
+    Value: !Ref BatchAppService
+    Export:
+      Name: !Sub ${StackPrefix}-BatchAppService
+  BatchAppServiceName:
+    Description: Batch ECS Service Name
+    Value: !Sub ${StackPrefix}-BatchAppService
+    Export:
+      Name: !Sub ${StackPrefix}-BatchAppService-Name          

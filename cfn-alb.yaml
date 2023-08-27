@@ -1,0 +1,198 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: ALB Template for CloudFormation Demo. Depends on cfn-vpc.yaml, cfn-sg.yaml
+#Metadata: 
+
+Parameters: 
+  StackPrefix:
+    Description: Stack Resource Name Prefix
+    Type: String
+    Default: Demo 
+  
+  EnvironmentType:
+    Description: Which environments to deploy your service.
+    Type: String
+    AllowedValues: ["Dev", "Staging", "Production"]
+    Default: Dev
+
+  FrontendHealthCheckPath:
+    Description: Frontend WebApp health check path
+    Type: String
+    MinLength: 1
+    MaxLength: 255
+    AllowedPattern: ^[-¥.¥/a-zA-Z0-9]*$
+    #Default: /backend-for-frontend/index.html
+    Default: /actuator/health
+
+  BackendHealthCheckPath:
+    Description: Backend Service Default health check path
+    Type: String
+    MinLength: 1
+    MaxLength: 255
+    AllowedPattern: ^[-¥.¥/a-zA-Z0-9]*$
+    #Default: /backend/api/v1/users
+    Default: /actuator/health
+
+Mappings:
+  DeployEnvironmentMap:
+    Dev:
+      "Protocol": "HTTP"
+      "ListenerPort": 80      
+      "TargetGroupPort": 8080      
+    Staging:
+      "Protocol": "HTTP"
+      "ListenerPort": 80
+      "TargetGroupPort": 8080
+    Production:
+      "Protocol": "HTTP"
+      "ListenerPort": 80
+      "TargetGroupPort": 8080      
+
+#Conditions: 
+
+Resources: 
+  #Public ALB for BFF
+  PublicALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:      
+      Name: !Sub ${StackPrefix}-PublicALB     
+      Subnets: 
+        - Fn::ImportValue: !Sub ${StackPrefix}-PublicSubnetOneId
+        - Fn::ImportValue: !Sub ${StackPrefix}-PublicSubnetTwoId
+      SecurityGroups: 
+        - Fn::ImportValue: !Sub ${StackPrefix}-PublicALBSecurityGroup-ID
+      Tags:
+        - Key: Name
+          Value: !Sub ${StackPrefix}-PublicALB
+
+  PublicALBDefaultTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub ${StackPrefix}-PubDfTg
+      TargetType: ip
+      VpcId: 
+        Fn::ImportValue: !Sub ${StackPrefix}-VPC-ID
+      Port: !FindInMap [DeployEnvironmentMap, !Ref EnvironmentType, TargetGroupPort]
+      Protocol: !FindInMap [DeployEnvironmentMap, !Ref EnvironmentType, Protocol]
+      HealthCheckPath: !Ref FrontendHealthCheckPath      
+      HealthCheckIntervalSeconds: 90
+      #HealthCheckTimeoutSeconds: 5
+      #HealthyThresholdCount: 3
+      TargetGroupAttributes: 
+        - Key: deregistration_delay.timeout_seconds
+          Value: '60'
+      Tags:
+        - Key: Name
+          Value: !Sub ${StackPrefix}-PubDfTg
+  PublicALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties: 
+      LoadBalancerArn: !Ref PublicALB
+      Port: !FindInMap [DeployEnvironmentMap, !Ref EnvironmentType, ListenerPort]                    
+      Protocol: !FindInMap [DeployEnvironmentMap, !Ref EnvironmentType, Protocol]      
+      DefaultActions: 
+        - Type: forward
+          TargetGroupArn: !Ref PublicALBDefaultTargetGroup                
+
+  #Privte ALB for Backend     
+  PrivateALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:      
+      Name: !Sub ${StackPrefix}-PrivateALB
+      Scheme: internal   
+      Subnets: 
+        - Fn::ImportValue: !Sub ${StackPrefix}-PrivateSubnetOneId
+        - Fn::ImportValue: !Sub ${StackPrefix}-PrivateSubnetTwoId
+      SecurityGroups: 
+        - Fn::ImportValue: !Sub ${StackPrefix}-PrivateALBSecurityGroup-ID      
+      Tags:
+        - Key: Name
+          Value: !Sub ${StackPrefix}-PrivateALB
+
+  PrivateALBDefaultTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub ${StackPrefix}-PrivDfTg
+      TargetType: ip
+      VpcId: 
+        Fn::ImportValue: !Sub ${StackPrefix}-VPC-ID
+      Port: !FindInMap [DeployEnvironmentMap, !Ref EnvironmentType, TargetGroupPort]
+      Protocol: !FindInMap [DeployEnvironmentMap, !Ref EnvironmentType, Protocol]
+      HealthCheckPath: !Ref BackendHealthCheckPath
+      HealthCheckIntervalSeconds: 60
+      #HealthCheckTimeoutSeconds: 5
+      #HealthyThresholdCount: 3
+      TargetGroupAttributes: 
+        - Key: deregistration_delay.timeout_seconds
+          Value: '60'
+      Tags:
+        - Key: Name
+          Value: !Sub ${StackPrefix}-PrivDfTg
+  PrivateALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties: 
+      LoadBalancerArn: !Ref PrivateALB
+      Port: !FindInMap [DeployEnvironmentMap, !Ref EnvironmentType, ListenerPort]                    
+      Protocol: !FindInMap [DeployEnvironmentMap, !Ref EnvironmentType, Protocol]      
+      DefaultActions: 
+        - Type: forward
+          TargetGroupArn: !Ref PrivateALBDefaultTargetGroup 
+Outputs:
+  PublicALBARN:
+    Description: Public ALB ARN
+    Value: !Ref PublicALB
+    Export:      
+      Name: !Sub ${StackPrefix}-PubALB
+
+  PublicALBDNS:
+    Description: Public ALB DNS Name
+    Value: !GetAtt PublicALB.DNSName
+    Export:
+      Name: !Sub ${StackPrefix}-PubALB-DNS
+
+  PublicALBDefaultTargetGroup:
+    Description: Public ALB Default TargetGroup 
+    Value: !Ref PublicALBDefaultTargetGroup
+    Export:
+      Name: !Sub ${StackPrefix}-PubALB-DefaultTargetGroup
+
+  PublicALBDefaultTargetGroupName:
+    Description: Public ALB  Default TargetGroup Name
+    Value: !GetAtt PublicALBDefaultTargetGroup.TargetGroupName
+    Export:
+      Name: !Sub ${StackPrefix}-PubALB-DefaultTargetGroupName
+
+  PublicALBListener:
+    Description: Public ALB Listener ARN
+    Value: !Ref PublicALBListener
+    Export:
+      Name: !Sub ${StackPrefix}-PubALB-Listener
+
+  PrivateALBARN:
+    Description: Private ALB ARN
+    Value: !Ref PrivateALB
+    Export:      
+      Name: !Sub ${StackPrefix}-PrivALB
+
+  PrivateALBDNS:
+    Description: Private ALB DNS Name
+    Value: !GetAtt PrivateALB.DNSName
+    Export:
+      Name: !Sub ${StackPrefix}-PrivALB-DNS
+
+  PrivateALBDefaultTargetGroup:
+    Description: Private ALB Default TargetGroup
+    Value: !Ref PrivateALBDefaultTargetGroup
+    Export:
+      Name: !Sub ${StackPrefix}-PrivALB-DefaultTargetGroup
+
+  PrivateALBDefaultTargetGroupName:
+    Description: Private ALB Default TargetGroup Name
+    Value: !GetAtt PrivateALBDefaultTargetGroup.TargetGroupName
+    Export:
+      Name: !Sub ${StackPrefix}-PrivALB-DefaultTargetGroupName
+
+  PrivateALBListener:
+    Description: Private ALB Listener ARN
+    Value: !Ref PrivateALBListener
+    Export:
+      Name: !Sub ${StackPrefix}-PrivALB-Listener

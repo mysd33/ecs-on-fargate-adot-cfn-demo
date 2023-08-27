@@ -1,0 +1,192 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: ECR Template for CloudFormation Demo
+#Metadata: 
+
+Parameters: 
+  StackPrefix:
+    Description: Stack Resource Name Prefix
+    Type: String
+    Default: Demo
+  BffRepositoryName:
+    Description: Bff App Repository Name
+    Type: String
+    #Default: mynavi-sample-ecs-bff
+    Default: sample-bff
+  BackendRepositoryName:
+    Description: Backend App Repository Name
+    Type: String
+    #Default: mynavi-sample-ecs-backend
+    Default: sample-backend
+  BatchRepositoryName:
+    Description: Batch App Repository Name
+    Type: String    
+    Default: sample-batch
+  ScheduleLaunchRepositoryName:
+    Description: ScheduleLaunch App Repository Name
+    Type: String    
+    Default: sample-schedulelaunch    
+  BffFluentBitRepositoryName:
+    Description: Bff Sidecar Fluent Bit Repository Name
+    Type: String
+    Default: fluent-bit-bff
+  BackendFluentBitRepositoryName:
+    Description: Backend Sidecar Fluent Bit Repository Name
+    Type: String
+    Default: fluent-bit-backend
+  BatchFluentBitRepositoryName:
+    Description: Batch Sidecar Fluent Bit Repository Name
+    Type: String
+    Default: fluent-bit-batch
+  ScheduleLaunchFluentBitRepositoryName:
+    Description: ScheduleLaunch Sidecar Fluent Bit Repository Name
+    Type: String
+    Default: fluent-bit-schedulelaunch    
+  XRayDaemonRepositoryName:
+    Description: X-Ray Daemon Repository Name
+    Type: String
+    Default: xray-daemon
+
+#Mappings: 
+
+#Conditions: 
+
+Resources: 
+  #Repository for App 
+  BffECRRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Ref BffRepositoryName
+      Tags:
+        - Key: Name
+          Value: !Sub ${StackPrefix}-BffECRRepository
+  BackendECRRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Ref BackendRepositoryName
+      Tags:
+        - Key: Name
+          Value: !Sub ${StackPrefix}-BackendECRRepository
+  BatchECRRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Ref BatchRepositoryName
+      Tags:
+        - Key: Name
+          Value: !Sub ${StackPrefix}-BatchECRRepository
+  ScheduleLaunchECRRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Ref ScheduleLaunchRepositoryName
+      Tags:
+        - Key: Name
+          Value: !Sub ${StackPrefix}-ScheduleLaunchECRRepository
+  #Repository for Sidecar FluentBit
+  BffFluentBitECRRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Ref BffFluentBitRepositoryName
+      Tags:
+        - Key: Name
+          Value: !Sub ${StackPrefix}-BffFluentBitECRRepository
+  BackendFluentBitECRRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Ref BackendFluentBitRepositoryName
+      Tags:
+        - Key: Name
+          Value: !Sub ${StackPrefix}-BackendFluentBitECRRepository
+  BatchFluentBitECRRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Ref BatchFluentBitRepositoryName
+      Tags:
+        - Key: Name
+          Value: !Sub ${StackPrefix}-BatchFluentBitECRRepository          
+  ScheduleLaunchFluentBitECRRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Ref ScheduleLaunchFluentBitRepositoryName
+      Tags:
+        - Key: Name
+          Value: !Sub ${StackPrefix}-ScheduleLaunchFluentBitECRRepository 
+  #X-Ray Damemon          
+  XRayDaemonECRRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Ref XRayDaemonRepositoryName
+      Tags:
+        - Key: Name
+          Value: !Sub ${StackPrefix}-XRayDaemonRepository
+Outputs:
+  BffECRRepositoryArn:
+    Description: Bff App Repository Arn
+    Value: !GetAtt BffECRRepository.Arn
+  BffECRRepositoryUri:
+    Description: Bff App Repository URI
+    Value: !GetAtt BffECRRepository.RepositoryUri
+    Export:
+      Name: !Sub ${StackPrefix}-BffECRRepositoryUri
+  BackendECRRepositoryArn:
+    Description: Backend App Repository Arn
+    Value: !GetAtt BackendECRRepository.Arn    
+  BackendECRRepositoryUri:
+    Description: Backend App Repository URI
+    Value: !GetAtt BackendECRRepository.RepositoryUri
+    Export:
+      Name: !Sub ${StackPrefix}-BackendECRRepositoryUri
+  BatchECRRepositoryArn:
+    Description: Batch App Repository Arn
+    Value: !GetAtt BatchECRRepository.Arn    
+  BatchECRRepositoryUri:
+    Description: Batch App Repository URI
+    Value: !GetAtt BatchECRRepository.RepositoryUri
+    Export:
+      Name: !Sub ${StackPrefix}-BatchECRRepositoryUri      
+  ScheduleLaunchECRRepositoryArn:
+    Description: ScheduleLaunch App Repository Arn
+    Value: !GetAtt ScheduleLaunchECRRepository.Arn    
+  ScheduleLaunchECRRepositoryUri:
+    Description: ScheduleLaunch App Repository URI
+    Value: !GetAtt ScheduleLaunchECRRepository.RepositoryUri
+    Export:
+      Name: !Sub ${StackPrefix}-ScheduleLaunchECRRepositoryUri           
+  BffFluentBitECRRepositoryArn:
+    Description: Bff Sidecar Fluent Bit Repository Arn
+    Value: !GetAtt BffFluentBitECRRepository.Arn    
+  BffFluentBitECRRepositoryUri:
+    Description: Bff Sidecar Fluent Bit Repository URI
+    Value: !GetAtt BffFluentBitECRRepository.RepositoryUri
+    Export:
+      Name: !Sub ${StackPrefix}-BffFluentBitECRRepositoryUri
+  BackendFluentBitECRRepositoryArn:
+    Description: Backend Sidecar Fluent Bit Repository Arn
+    Value: !GetAtt BackendFluentBitECRRepository.Arn    
+  BackendFluentBitECRRepositoryUri:
+    Description: Backend Sidecar Fluent Bit Repository URI
+    Value: !GetAtt BackendFluentBitECRRepository.RepositoryUri
+    Export:
+      Name: !Sub ${StackPrefix}-BackendFluentBitECRRepositoryUri      
+  BatchFluentBitECRRepositoryArn:
+    Description: Batch Sidecar Fluent Bit Repository Arn
+    Value: !GetAtt BatchFluentBitECRRepository.Arn    
+  BatchFluentBitECRRepositoryUri:
+    Description: Batch Sidecar Fluent Bit Repository URI
+    Value: !GetAtt BatchFluentBitECRRepository.RepositoryUri
+    Export:
+      Name: !Sub ${StackPrefix}-BatchFluentBitECRRepositoryUri  
+  ScheduleLaunchFluentBitECRRepositoryArn:
+    Description: ScheduleLaunch Sidecar Fluent Bit Repository Arn
+    Value: !GetAtt ScheduleLaunchFluentBitECRRepository.Arn    
+  ScheduleLaunchFluentBitECRRepositoryUri:
+    Description: ScheduleLaunch Sidecar Fluent Bit Repository URI
+    Value: !GetAtt ScheduleLaunchFluentBitECRRepository.RepositoryUri
+    Export:
+      Name: !Sub ${StackPrefix}-ScheduleLaunchFluentBitECRRepositoryUri  
+  XRayDaemonECRRepositoryArn:  
+    Description: X-Ray Daemon Repository Arn
+    Value: !GetAtt XRayDaemonECRRepository.Arn    
+  XRayDaemonECRRepositoryUri:
+    Description: X-Ray Daemon Repository URI
+    Value: !GetAtt XRayDaemonECRRepository.RepositoryUri
+    Export:
+      Name: !Sub ${StackPrefix}-XRayDaemonECRRepositoryUri    
