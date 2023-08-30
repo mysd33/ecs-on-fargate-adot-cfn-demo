@@ -42,6 +42,8 @@ Resources:
       Source:
         Type: CODECOMMIT
         Location: !Sub https://git-codecommit.${AWS::Region}.amazonaws.com/v1/repos/${RepositoryName}
+        #TODO: parameterize
+        BuildSpec: buildspec-adot.yml
       SourceVersion: !Ref BranchName
       Artifacts:
         Type: S3

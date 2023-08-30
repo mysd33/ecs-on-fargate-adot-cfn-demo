@@ -36,29 +36,26 @@ Parameters:
 Mappings: 
   FrontendAppTaskDefinitionMap:
     Production:
-      "Memory" : 1024
-      "Cpu" : 512
+      "Memory" : 2048
+      "Cpu" : 1024
       "ContainerName" : "ecsdemo-frontend-app"
       "ContainerImage" : "sample-bff:latest"
       "ContainerPort" : 8080
-      "ContainerMemory" : 1024
-      "Profile" : "production,log_container,xray"
+      "Profile" : "production,log_container,adot"
     Staging:
-      "Memory" : 1024
-      "Cpu" : 512
+      "Memory" : 2048
+      "Cpu" : 1024
       "ContainerName" : "ecsdemo-frontend-app"
       "ContainerImage" : "sample-bff:latest"
       "ContainerPort" : 8080
-      "ContainerMemory" : 1024
-      "Profile" : "staging,log_container,xray"
+      "Profile" : "staging,log_container,adot"
     Dev:
-      "Memory" : 1024
-      "Cpu" : 512
+      "Memory" : 2048
+      "Cpu" : 1024
       "ContainerName" : "ecsdemo-frontend-app"
       "ContainerImage" : "sample-bff:latest"
       "ContainerPort" : 8080
-      "ContainerMemory" : 1024
-      "Profile" : "dev,log_container,xray"
+      "Profile" : "dev,log_container,adot"
   BackendServiceTaskDefinitionMap:
     Production:
       "Memory" : 1024
@@ -66,24 +63,21 @@ Mappings:
       "ContainerName" : "ecsdemo-backend-service"
       "ContainerImage" : "sample-backend:latest"
       "ContainerPort" : 8080
-      "ContainerMemory" : 1024
-      "Profile" : "production,log_container,xray"
+      "Profile" : "production,log_container"
     Staging:
       "Memory" : 1024
       "Cpu" : 512
       "ContainerName" : "ecsdemo-backend-service"
       "ContainerImage" : "sample-backend:latest"
       "ContainerPort" : 8080
-      "ContainerMemory" : 1024
-      "Profile" : "staging,log_container,xray"
+      "Profile" : "staging,log_container"
     Dev:
       "Memory" : 1024
       "Cpu" : 512
       "ContainerName" : "ecsdemo-backend-service"
       "ContainerImage" : "sample-backend:latest"
       "ContainerPort" : 8080
-      "ContainerMemory" : 1024
-      "Profile" : "dev,log_container,xray"
+      "Profile" : "dev,log_container"
   BatchAppTaskDefinitionMap:
     Production:
       "Memory" : 1024
@@ -91,7 +85,6 @@ Mappings:
       "ContainerName" : "ecsdemo-batch-app"      
       "ContainerImage" : "sample-batch:latest"
       "ContainerPort" : 8080
-      "ContainerMemory" : 1024
       "Profile" : "production,log_container"
     Staging:
       "Memory" : 1024
@@ -99,7 +92,6 @@ Mappings:
       "ContainerName" : "ecsdemo-batch-app"                  
       "ContainerImage" : "sample-batch:latest"
       "ContainerPort" : 8080
-      "ContainerMemory" : 1024
       "Profile" : "staging,log_container"
     Dev:
       "Memory" : 1024
@@ -107,7 +99,6 @@ Mappings:
       "ContainerName" : "ecsdemo-batch-app"                  
       "ContainerImage" : "sample-batch:latest"
       "ContainerPort" : 8080
-      "ContainerMemory" : 1024
       "Profile" : "dev,log_container"
   ScheduleLaunchAppTaskDefinitionMap:
     Production:
@@ -115,21 +106,18 @@ Mappings:
       "Cpu" : 512
       "ContainerName" : "ecsdemo-schedulelaunch-app"      
       "ContainerImage" : "sample-schedulelaunch:latest"
-      "ContainerMemory" : 1024
       "Profile" : "production,log_container"
     Staging:
       "Memory" : 1024
       "Cpu" : 512
       "ContainerName" : "ecsdemo-schedulelaunch-app"                  
       "ContainerImage" : "sample-schedulelaunch:latest"
-      "ContainerMemory" : 1024
       "Profile" : "staging,log_container"
     Dev:
       "Memory" : 1024
       "Cpu" : 512
       "ContainerName" : "ecsdemo-schedulelaunch-app"                  
       "ContainerImage" : "sample-schedulelaunch:latest"
-      "ContainerMemory" : 1024
       "Profile" : "dev,log_container"      
 #Conditions: 
 
@@ -182,7 +170,7 @@ Resources:
       TaskRoleArn:
         Fn::ImportValue: !Sub ${StackPrefix}-FrontendECSTaskRole-Arn
       Volumes:
-        - Name: tmp        
+        - Name: tmp
       ContainerDefinitions:
         - Name: !FindInMap [FrontendAppTaskDefinitionMap, !Ref EnvironmentType, ContainerName]
           Image: 
@@ -193,7 +181,7 @@ Resources:
           ReadonlyRootFilesystem: true
           MountPoints:
             - SourceVolume: tmp
-              ContainerPath: /tmp                   
+              ContainerPath: /tmp              
           PortMappings:
             - ContainerPort: !FindInMap [FrontendAppTaskDefinitionMap, !Ref EnvironmentType, ContainerPort]
           Environment:
@@ -231,7 +219,9 @@ Resources:
               Value: !Ref DBUsername 
             - Name: SPRING_DATASOURCE_PASSWORD
               Value: !Ref DBPassword
-          Memory: !FindInMap [FrontendAppTaskDefinitionMap, !Ref EnvironmentType, ContainerMemory]
+            #TODO: parameterize
+            - Name: OTEL_RESOURCE_ATTRIBUTES
+              Value: service.name=sample-bff,service.namespace=demo              
           LogConfiguration:
             LogDriver: awsfirelens
         - Name: frontend_log_router
@@ -248,14 +238,24 @@ Resources:
               awslogs-group: !Ref FrontendFireLensLogGroup
               awslogs-region: !Ref "AWS::Region"
               awslogs-stream-prefix: !Ref StackPrefix
-        - Name: xray-daemon
+        - Name: aws-collector
           Image:
-            Fn::ImportValue: !Sub ${StackPrefix}-XRayDaemonECRRepositoryUri
-          Cpu: 32
-          MemoryReservation: 256          
-          PortMappings:
-            - ContainerPort: 2000              
-              Protocol: udp
+            Fn::ImportValue: !Sub ${StackPrefix}-AdotCollectorECRRepositoryUri          
+          Command:
+            - "--config=/etc/ecs/ecs-default-config.yaml"
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-create-group: true
+              awslogs-group: /ecs/ecs-aws-otel-sidecar-collector-fe
+              awslogs-region: !Ref "AWS::Region"
+              awslogs-stream-prefix: ecs                      
+          HealthCheck:
+            Command:
+              - "/healthcheck"
+            Interval: 5
+            Retries: 2
+            Timeout: 3                
       Tags:
         - Key: Name
           Value: !Sub ${StackPrefix}-FrontendAppECSTaskDefinition
@@ -284,8 +284,8 @@ Resources:
                 - !FindInMap [BackendServiceTaskDefinitionMap, !Ref EnvironmentType, ContainerImage]
           ReadonlyRootFilesystem: true
           MountPoints:
-            - SourceVolume: tmp
-              ContainerPath: /tmp                   
+            - SourceVolume: tmp                
+              ContainerPath: /tmp              
           PortMappings:
             - ContainerPort: !FindInMap [BackendServiceTaskDefinitionMap, !Ref EnvironmentType, ContainerPort]              
           Environment:
@@ -304,7 +304,10 @@ Resources:
             - Name: SPRING_DATASOURCE_USERNAME
               Value: !Ref DBUsername 
             - Name: SPRING_DATASOURCE_PASSWORD
-              Value: !Ref DBPassword              
+              Value: !Ref DBPassword  
+            #TODO: parameterize
+            - Name: OTEL_RESOURCE_ATTRIBUTES
+              Value: service.name=sample-backend,service.namespace=demo                            
           Memory: !FindInMap [BackendServiceTaskDefinitionMap, !Ref EnvironmentType, ContainerMemory]
           LogConfiguration:
             LogDriver: awsfirelens
@@ -322,14 +325,24 @@ Resources:
               awslogs-group: !Ref BackendFireLensLogGroup
               awslogs-region: !Ref "AWS::Region"
               awslogs-stream-prefix: !Ref StackPrefix
-        - Name: xray-daemon
+        - Name: aws-collector
           Image:
-            Fn::ImportValue: !Sub ${StackPrefix}-XRayDaemonECRRepositoryUri
-          Cpu: 32
-          MemoryReservation: 256          
-          PortMappings:
-            - ContainerPort: 2000              
-              Protocol: udp
+            Fn::ImportValue: !Sub ${StackPrefix}-AdotCollectorECRRepositoryUri            
+          Command:
+            - "--config=/etc/ecs/ecs-default-config.yaml"
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-create-group: true
+              awslogs-group: /ecs/ecs-aws-otel-sidecar-collector-be
+              awslogs-region: !Ref "AWS::Region"
+              awslogs-stream-prefix: ecs                      
+          HealthCheck:
+            Command:
+              - "/healthcheck"
+            Interval: 5
+            Retries: 2
+            Timeout: 3              
       Tags:
         - Key: Name
           Value: !Sub ${StackPrefix}-BackendServiceECSTaskDefinition
@@ -358,8 +371,8 @@ Resources:
                 - !FindInMap [BatchAppTaskDefinitionMap, !Ref EnvironmentType, ContainerImage]
           ReadonlyRootFilesystem: true
           MountPoints:
-            - SourceVolume: tmp
-              ContainerPath: /tmp                   
+            - SourceVolume: tmp                
+              ContainerPath: /tmp              
           PortMappings:
             - ContainerPort: !FindInMap [BatchAppTaskDefinitionMap, !Ref EnvironmentType, ContainerPort]
           Environment:
@@ -394,7 +407,9 @@ Resources:
               Value: !Ref DBUsername 
             - Name: SPRING_DATASOURCE_PASSWORD
               Value: !Ref DBPassword
-          Memory: !FindInMap [BatchAppTaskDefinitionMap, !Ref EnvironmentType, ContainerMemory]
+            #TODO: parameterize
+            - Name: OTEL_RESOURCE_ATTRIBUTES
+              Value: service.name=sample-batch,service.namespace=demo
           LogConfiguration:
             LogDriver: awsfirelens
         - Name: batch_log_router
@@ -411,14 +426,24 @@ Resources:
               awslogs-group: !Ref BatchFireLensLogGroup
               awslogs-region: !Ref "AWS::Region"
               awslogs-stream-prefix: !Ref StackPrefix
-        - Name: xray-daemon
+        - Name: aws-collector
           Image:
-            Fn::ImportValue: !Sub ${StackPrefix}-XRayDaemonECRRepositoryUri
-          Cpu: 32
-          MemoryReservation: 256          
-          PortMappings:
-            - ContainerPort: 2000              
-              Protocol: udp
+            Fn::ImportValue: !Sub ${StackPrefix}-AdotCollectorECRRepositoryUri            
+          Command:
+            - "--config=/etc/ecs/ecs-default-config.yaml"
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-create-group: true
+              awslogs-group: /ecs/ecs-aws-otel-sidecar-collector-bt
+              awslogs-region: !Ref "AWS::Region"
+              awslogs-stream-prefix: ecs                      
+          HealthCheck:
+            Command:
+              - "/healthcheck"
+            Interval: 5
+            Retries: 2
+            Timeout: 3
       Tags:
         - Key: Name
           Value: !Sub ${StackPrefix}-BatchAppECSTaskDefinition
@@ -447,8 +472,8 @@ Resources:
                 - !FindInMap [ScheduleLaunchAppTaskDefinitionMap, !Ref EnvironmentType, ContainerImage]
           ReadonlyRootFilesystem: true
           MountPoints:
-            - SourceVolume: tmp
-              ContainerPath: /tmp                   
+            - SourceVolume: tmp                
+              ContainerPath: /tmp              
           Environment:
             - Name: SPRING_PROFILES_ACTIVE
               Value: !FindInMap [ScheduleLaunchAppTaskDefinitionMap, !Ref EnvironmentType, Profile]            
@@ -458,8 +483,10 @@ Resources:
             - Name: AWS_SQS_REGION
               Value: !Ref AWS::Region       
             - Name: BATCH_SCHEDULE_TARGETID
-              Value: SB_001              
-          Memory: !FindInMap [ScheduleLaunchAppTaskDefinitionMap, !Ref EnvironmentType, ContainerMemory]
+              Value: SB_001   
+            #TODO: parameterize
+            - Name: OTEL_RESOURCE_ATTRIBUTES
+              Value: service.name=sample-schedulelaunch,service.namespace=demo
           LogConfiguration:
             LogDriver: awsfirelens
         - Name: batch_log_router
@@ -475,15 +502,25 @@ Resources:
             Options:
               awslogs-group: !Ref ScheduleLaunchFireLensLogGroup
               awslogs-region: !Ref "AWS::Region"
-              awslogs-stream-prefix: !Ref StackPrefix
-        - Name: xray-daemon
+              awslogs-stream-prefix: !Ref StackPrefix 
+        - Name: aws-collector
           Image:
-            Fn::ImportValue: !Sub ${StackPrefix}-XRayDaemonECRRepositoryUri
-          Cpu: 32
-          MemoryReservation: 256          
-          PortMappings:
-            - ContainerPort: 2000              
-              Protocol: udp
+            Fn::ImportValue: !Sub ${StackPrefix}-AdotCollectorECRRepositoryUri            
+          Command:
+            - "--config=/etc/ecs/ecs-default-config.yaml"
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-create-group: true
+              awslogs-group: /ecs/ecs-aws-otel-sidecar-collector-sl
+              awslogs-region: !Ref "AWS::Region"
+              awslogs-stream-prefix: ecs                      
+          HealthCheck:
+            Command:
+              - "/healthcheck"
+            Interval: 5
+            Retries: 2
+            Timeout: 3              
       Tags:
         - Key: Name
           Value: !Sub ${StackPrefix}-ScheduleLaunchAppECSTaskDefinition

@@ -41,10 +41,10 @@ Parameters:
     Description: ScheduleLaunch Sidecar Fluent Bit Repository Name
     Type: String
     Default: fluent-bit-schedulelaunch    
-  XRayDaemonRepositoryName:
-    Description: X-Ray Daemon Repository Name
+  AdotCollectorRepositoryName:
+    Description: ADOT Collector Repository Name
     Type: String
-    Default: xray-daemon
+    Default: aws-otel-collector
 
 #Mappings: 
 
@@ -109,14 +109,14 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${StackPrefix}-ScheduleLaunchFluentBitECRRepository 
-  #X-Ray Damemon          
-  XRayDaemonECRRepository:
+  #ADOT Collector
+  AdotCollectorECRRepository:
     Type: AWS::ECR::Repository
     Properties:
-      RepositoryName: !Ref XRayDaemonRepositoryName
+      RepositoryName: !Ref AdotCollectorRepositoryName
       Tags:
         - Key: Name
-          Value: !Sub ${StackPrefix}-XRayDaemonRepository
+          Value: !Sub ${StackPrefix}-AdotCollectorRepository
 Outputs:
   BffECRRepositoryArn:
     Description: Bff App Repository Arn
@@ -182,11 +182,11 @@ Outputs:
     Value: !GetAtt ScheduleLaunchFluentBitECRRepository.RepositoryUri
     Export:
       Name: !Sub ${StackPrefix}-ScheduleLaunchFluentBitECRRepositoryUri  
-  XRayDaemonECRRepositoryArn:  
-    Description: X-Ray Daemon Repository Arn
-    Value: !GetAtt XRayDaemonECRRepository.Arn    
-  XRayDaemonECRRepositoryUri:
-    Description: X-Ray Daemon Repository URI
-    Value: !GetAtt XRayDaemonECRRepository.RepositoryUri
+  AdotCollectorECRRepositoryArn:  
+    Description: ADOT Collector Repository Arn
+    Value: !GetAtt AdotCollectorECRRepository.Arn    
+  AdotCollectorECRRepositoryUri:
+    Description: ADOT Collector Repository URI
+    Value: !GetAtt AdotCollectorECRRepository.RepositoryUri
     Export:
-      Name: !Sub ${StackPrefix}-XRayDaemonECRRepositoryUri    
+      Name: !Sub ${StackPrefix}-AdotCollectorECRRepositoryUri    

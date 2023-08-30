@@ -1,4 +1,4 @@
-# SpringBoot APをECS/Fargateで動作させCode系でCI/CDするCloudFormationサンプルテンプレート
+# SpringBoot APをECS/Fargateで動作させCode系でCI/CDするCloudFormationサンプルテンプレート【ADOT版】
 
 ## 構成
 * システム構成図
@@ -41,14 +41,17 @@
     * awslogsドライバを使ったCloudWatch Logsへのログ転送とFireLens+Fluent Bitによるログ転送に対応。
     * Firelensの場合はFirelensをサイドカーコンテナとして配置する必要がある。
 ![ログドライバ](img/logdriver.png)
+
 * X-Rayによる分散トレーシング・可視化
-    * X-Rayを使ってアプリケーションやAWSサービス間の処理の流れをトレースし、可視化に対応。
-    * X-Rayデーモンをサイドカーコンテナとして配置。
+    * ADOT（AWS Distro for OpenTelemetry）を使って、X-RayによりアプリケーションやAWSサービス間の処理の流れをトレースし、可視化に対応。
+    * ADOT Collectorをサイドカーコンテナとして配置。
+        * ADOTの場合、X-Rayのトレース情報だけでなく、StatsDのメトリックスもCloudWatchへ転送される。
 ![X-Ray](img/xray.png)
-  * X-Rayによる可視化
+    * X-Rayによる可視化
 ![X-Ray可視化](img/xray-visualization.png)
+
 * オートスケーリング
-  * 平均CPU使用率のターゲット追跡スケーリングポリシーによる例に対応している。
+    * 平均CPU使用率のターゲット追跡スケーリングポリシーによる例に対応している。
 ![オートスケーリング](img/autoscaling.png)
 
 ## 事前準備
@@ -108,7 +111,7 @@ aws cloudformation create-stack --stack-name ECS-IAM-Stack --template-body file:
 aws cloudformation validate-template --template-body file://cfn-ecr.yaml
 aws cloudformation create-stack --stack-name ECR-Stack --template-body file://cfn-ecr.yaml
 ```
-* 4つのSpringBootAP用のリポジトリと、X-Rayデーモン用のリポジトリ、ログ転送にFireLens利用時の各AP向けFluentBit用のリポジトリが作成される。
+* 4つのSpringBootAP用のリポジトリと、ADOT Collector用のリポジトリ、ログ転送にFireLens利用時の各AP向けFluentBit用のリポジトリが作成される。
 ### 3. CodeBuildのプロジェクト作成
 * BFFアプリケーション
 ```sh
@@ -155,22 +158,22 @@ aws cloudformation create-stack --stack-name ScheduleLaunch-CodeBuild-Stack --te
 * 4つのCodeBuildプロジェクトが作成されるので、それぞれビルド実行し、ECRにDockerイメージをプッシュさせる。
 
 
-### 5. X-RayデーモンのDockerイメージプッシュ
-* X-Rayを利用し分散トレーシングおよび可視化を実施するため、x-rayフォルダにあるDockerFileを使用して、X-RayデーモンのDockerイメージをビルドし、ECRにイメージをプッシュする。
+### 5. ADOT CollectorのDockerイメージプッシュ
+* ADOTでX-Rayを利用し分散トレーシングおよび可視化を実施するため、Public GalleryにあるADOT Collectorのイメージをいったん、自分のECRに持ってきてpush
+
 * 以下、コマンドを実行
 ```sh
-cd x-ray
 set AWS_ACCOUNT_ID=(アカウントID)
 set AWS_REGION=(リージョン)　#例: set AWS_REGION=ap-northeast-1
 aws ecr get-login-password --region %AWS_REGION% | docker login --username AWS --password-stdin %AWS_ACCOUNT_ID%.dkr.ecr.%AWS_REGION%.amazonaws.com
 ```
 ```sh
-docker build -t xray-daemon .
-docker tag xray-daemon:latest %AWS_ACCOUNT_ID%.dkr.ecr.%AWS_REGION%.amazonaws.com/xray-daemon:latest
-docker push %AWS_ACCOUNT_ID%.dkr.ecr.%AWS_REGION%.amazonaws.com/xray-daemon:latest
+docker pull public.ecr.aws/aws-observability/aws-otel-collector:latest
+docker tag public.ecr.aws/aws-observability/aws-otel-collector %AWS_ACCOUNT_ID%.dkr.ecr.%AWS_REGION%.amazonaws.com/aws-otel-collector:latest
+docker push %AWS_ACCOUNT_ID%.dkr.ecr.%AWS_REGION%.amazonaws.com/aws-otel-collector:latest
 ```
 
-### 6. （FireLens利用時のみ）Fluent BitのDockerイメージプッシュ
+## 6. （FireLens利用時のみ）Fluent BitのDockerイメージプッシュ
 * firelensフォルダにある「extra-for-backend.conf」、「extra-for-backend.conf」の設定ファイル中の「bucket」をログ出力用のS3バケット名に変える。
 * ログ転送にFireLensを利用する場合、サイドカーコンテナで使用するFluent BitのDockerイメージをビルドし、ECRにイメージをプッシュする。
 * 以下、コマンドを実行
