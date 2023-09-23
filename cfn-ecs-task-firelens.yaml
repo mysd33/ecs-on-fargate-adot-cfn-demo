@@ -307,8 +307,7 @@ Resources:
               Value: !Ref DBPassword  
             #TODO: parameterize
             - Name: OTEL_RESOURCE_ATTRIBUTES
-              Value: service.name=sample-backend,service.namespace=demo                            
-          Memory: !FindInMap [BackendServiceTaskDefinitionMap, !Ref EnvironmentType, ContainerMemory]
+              Value: service.name=sample-backend,service.namespace=demo          
           LogConfiguration:
             LogDriver: awsfirelens
         - Name: backend_log_router
