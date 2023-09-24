@@ -173,7 +173,7 @@ docker tag public.ecr.aws/aws-observability/aws-otel-collector %AWS_ACCOUNT_ID%.
 docker push %AWS_ACCOUNT_ID%.dkr.ecr.%AWS_REGION%.amazonaws.com/aws-otel-collector:latest
 ```
 
-## 6. （FireLens利用時のみ）Fluent BitのDockerイメージプッシュ
+### 6. （FireLens利用時のみ）Fluent BitのDockerイメージプッシュ
 * firelensフォルダにある「extra-for-backend.conf」、「extra-for-backend.conf」の設定ファイル中の「bucket」をログ出力用のS3バケット名に変える。
 * ログ転送にFireLensを利用する場合、サイドカーコンテナで使用するFluent BitのDockerイメージをビルドし、ECRにイメージをプッシュする。
 * 以下、コマンドを実行
@@ -241,7 +241,7 @@ aws cloudformation validate-template --template-body file://cfn-ecache-redis.yam
 aws cloudformation create-stack --stack-name ECS-ECACHE-Stack --template-body file://cfn-ecache-redis.yaml
 ```
 ## RDB環境構築
-### 1. Aurora Serverless v2 for PostgreSQLのクラスタ作成
+### 1. Aurora Serverless v2 for PostgreSQLのクラスタおよびSecrets Managerの作成
 * 各サンプルAPではRDBでデータ管理するため、Aurora Serverless v2 for PostgreSQLを作成する。  
     * 作成にしばらく時間がかかる。
 ```sh
@@ -292,7 +292,7 @@ aws cloudformation create-stack --stack-name ECS-CLUSTER-Stack --template-body f
 * awslogsドライバのタスク定義を作成
 ```sh
 aws cloudformation validate-template --template-body file://cfn-ecs-task.yaml
-aws cloudformation create-stack --stack-name ECS-TASK-Stack --template-body file://cfn-ecs-task.yaml --parameters ParameterKey=DBUsername,ParameterValue=postgres ParameterKey=DBPassword,ParameterValue=password
+aws cloudformation create-stack --stack-name ECS-TASK-Stack --template-body file://cfn-ecs-task.yaml
 ```
 
 * AP内のデータ保存用のS3バケット名を変えるには、それぞれのcfnスタック作成時のコマンドでパラメータを指定する
@@ -302,7 +302,7 @@ aws cloudformation create-stack --stack-name ECS-TASK-Stack --template-body file
 * awsfirelensドライバのタスク定義を作成
 ```sh
 aws cloudformation validate-template --template-body file://cfn-ecs-task-firelens.yaml
-aws cloudformation create-stack --stack-name ECS-TASK-Stack --template-body file://cfn-ecs-task-firelens.yaml --parameters ParameterKey=DBUsername,ParameterValue=postgres ParameterKey=DBPassword,ParameterValue=password
+aws cloudformation create-stack --stack-name ECS-TASK-Stack --template-body file://cfn-ecs-task-firelens.yaml
 ```
 
 * AP内のデータ保存用のS3バケット名を変えるには、それぞれのcfnスタック作成時のコマンドでパラメータを指定する
