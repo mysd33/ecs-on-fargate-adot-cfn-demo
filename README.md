@@ -46,7 +46,7 @@
     * ADOT（AWS Distro for OpenTelemetry）を使って、X-RayによりアプリケーションやAWSサービス間の処理の流れをトレースし、可視化に対応。
     * ADOT Collectorをサイドカーコンテナとして配置。
         * ~~ADOTの場合、X-Rayのトレース情報だけでなく、StatsDのメトリックスもCloudWatchへ転送される。~~
-        * この例では、ADOTのデフォルトではCloudWatchに転送されるCメトリックスについては不要として、エージェントおよびコレクタで転送を無効化している
+        * この例では、ADOTのデフォルトではCloudWatchに転送されるメトリックスについては不要として、エージェントおよびコレクタで転送を無効化している
 ![X-Ray](img/xray.png)
     * X-Rayによる可視化
 ![X-Ray可視化](img/xray-visualization.png)
