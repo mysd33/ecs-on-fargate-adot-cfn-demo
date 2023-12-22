@@ -202,6 +202,8 @@ Resources:
             #TODO: parameterize
             - Name: OTEL_RESOURCE_ATTRIBUTES
               Value: service.name=sample-bff,service.namespace=demo
+            - Name: OTEL_METRICS_EXPORTER
+              Value: none
           Secrets:
             - Name: SPRING_DATASOURCE_USERNAME
               ValueFrom:
@@ -287,6 +289,8 @@ Resources:
             #TODO: parameterize
             - Name: OTEL_RESOURCE_ATTRIBUTES
               Value: service.name=sample-backend,service.namespace=demo
+            - Name: OTEL_METRICS_EXPORTER
+              Value: none              
           Secrets:
             - Name: SPRING_DATASOURCE_USERNAME
               ValueFrom:
@@ -387,6 +391,8 @@ Resources:
             #TODO: parameterize
             - Name: OTEL_RESOURCE_ATTRIBUTES
               Value: service.name=sample-batch,service.namespace=demo
+            - Name: OTEL_METRICS_EXPORTER
+              Value: none              
           Secrets:
             - Name: SPRING_DATASOURCE_USERNAME
               ValueFrom:
@@ -467,6 +473,8 @@ Resources:
             #TODO: parameterize
             - Name: OTEL_RESOURCE_ATTRIBUTES
               Value: service.name=sample-schedulelaunch,service.namespace=demo
+            - Name: OTEL_METRICS_EXPORTER
+              Value: none              
           LogConfiguration:
             LogDriver: awslogs
             Options:
