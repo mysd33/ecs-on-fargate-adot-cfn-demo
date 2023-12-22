@@ -227,7 +227,7 @@ Resources:
           Image:
             Fn::ImportValue: !Sub ${StackPrefix}-AdotCollectorECRRepositoryUri          
           Command:
-            - "--config=/etc/ecs/ecs-default-config.yaml"
+            - "--config=/etc/ecs/ecs-xray.yaml"
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -314,7 +314,7 @@ Resources:
           Image:
             Fn::ImportValue: !Sub ${StackPrefix}-AdotCollectorECRRepositoryUri            
           Command:
-            - "--config=/etc/ecs/ecs-default-config.yaml"
+            - "--config=/etc/ecs/ecs-xray.yaml"
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -416,7 +416,7 @@ Resources:
           Image:
             Fn::ImportValue: !Sub ${StackPrefix}-AdotCollectorECRRepositoryUri            
           Command:
-            - "--config=/etc/ecs/ecs-default-config.yaml"
+            - "--config=/etc/ecs/ecs-xray.yaml"
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -485,7 +485,7 @@ Resources:
           Image:
             Fn::ImportValue: !Sub ${StackPrefix}-AdotCollectorECRRepositoryUri            
           Command:
-            - "--config=/etc/ecs/ecs-default-config.yaml"
+            - "--config=/etc/ecs/ecs-xray.yaml"
           LogConfiguration:
             LogDriver: awslogs
             Options:
