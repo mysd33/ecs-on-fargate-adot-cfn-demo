@@ -202,6 +202,8 @@ Resources:
             #TODO: parameterize
             - Name: OTEL_RESOURCE_ATTRIBUTES
               Value: service.name=sample-bff,service.namespace=demo
+            - Name: OTEL_METRICS_EXPORTER
+              Value: none              
           Secrets:
             - Name: SPRING_DATASOURCE_USERNAME
               ValueFrom:
@@ -235,7 +237,7 @@ Resources:
           Image:
             Fn::ImportValue: !Sub ${StackPrefix}-AdotCollectorECRRepositoryUri          
           Command:
-            - "--config=/etc/ecs/ecs-default-config.yaml"
+            - "--config=/etc/ecs/ecs-xray.yaml"
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -297,6 +299,8 @@ Resources:
             #TODO: parameterize
             - Name: OTEL_RESOURCE_ATTRIBUTES
               Value: service.name=sample-backend,service.namespace=demo
+            - Name: OTEL_METRICS_EXPORTER
+              Value: none                  
           Secrets:
             - Name: SPRING_DATASOURCE_USERNAME
               ValueFrom:
@@ -330,7 +334,7 @@ Resources:
           Image:
             Fn::ImportValue: !Sub ${StackPrefix}-AdotCollectorECRRepositoryUri            
           Command:
-            - "--config=/etc/ecs/ecs-default-config.yaml"
+            - "--config=/etc/ecs/ecs-xray.yaml"
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -407,6 +411,8 @@ Resources:
             #TODO: parameterize
             - Name: OTEL_RESOURCE_ATTRIBUTES
               Value: service.name=sample-batch,service.namespace=demo
+            - Name: OTEL_METRICS_EXPORTER
+              Value: none                  
           Secrets:
             - Name: SPRING_DATASOURCE_USERNAME
               ValueFrom:
@@ -440,7 +446,7 @@ Resources:
           Image:
             Fn::ImportValue: !Sub ${StackPrefix}-AdotCollectorECRRepositoryUri            
           Command:
-            - "--config=/etc/ecs/ecs-default-config.yaml"
+            - "--config=/etc/ecs/ecs-xray.yaml"
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -497,6 +503,8 @@ Resources:
             #TODO: parameterize
             - Name: OTEL_RESOURCE_ATTRIBUTES
               Value: service.name=sample-schedulelaunch,service.namespace=demo
+            - Name: OTEL_METRICS_EXPORTER
+              Value: none                  
           LogConfiguration:
             LogDriver: awsfirelens
         - Name: batch_log_router
@@ -517,7 +525,7 @@ Resources:
           Image:
             Fn::ImportValue: !Sub ${StackPrefix}-AdotCollectorECRRepositoryUri            
           Command:
-            - "--config=/etc/ecs/ecs-default-config.yaml"
+            - "--config=/etc/ecs/ecs-xray.yaml"
           LogConfiguration:
             LogDriver: awslogs
             Options:
