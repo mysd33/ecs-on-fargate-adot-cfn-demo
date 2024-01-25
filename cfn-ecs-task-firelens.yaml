@@ -199,11 +199,18 @@ Resources:
                     - Fn::ImportValue: !Sub ${StackPrefix}-RDSClusterEndpointPort
                     - "/"
                     - Fn::ImportValue: !Sub ${StackPrefix}-RDSDBName
-            #TODO: parameterize
+            - Name: RESILIENCE4J_TIMELIMITER_CONFIGS_DEFAULT_TIMEOUTDURATION
+              Value: 3s        
+            # ADOT Environment Variables
+            # TODO: parameterize service name and namespace
             - Name: OTEL_RESOURCE_ATTRIBUTES
               Value: service.name=sample-bff,service.namespace=demo
             - Name: OTEL_METRICS_EXPORTER
-              Value: none              
+              Value: none 
+            # Redis Instrumentation off   
+            # https://opentelemetry.io/docs/languages/java/automatic/agent-config/#suppressing-specific-agent-instrumentation          
+            - Name: OTEL_INSTRUMENTATION_LETTUCE_ENABLED
+              Value: false        
           Secrets:
             - Name: SPRING_DATASOURCE_USERNAME
               ValueFrom:
@@ -296,7 +303,8 @@ Resources:
                     - Fn::ImportValue: !Sub ${StackPrefix}-RDSClusterEndpointPort
                     - "/"
                     - Fn::ImportValue: !Sub ${StackPrefix}-RDSDBName 
-            #TODO: parameterize
+            # ADOT Environment Variables
+            # TODO: parameterize service name and namespace            
             - Name: OTEL_RESOURCE_ATTRIBUTES
               Value: service.name=sample-backend,service.namespace=demo
             - Name: OTEL_METRICS_EXPORTER
@@ -408,7 +416,10 @@ Resources:
                     - Fn::ImportValue: !Sub ${StackPrefix}-RDSClusterEndpointPort
                     - "/"
                     - Fn::ImportValue: !Sub ${StackPrefix}-RDSDBName
-            #TODO: parameterize
+            - Name: RESILIENCE4J_TIMELIMITER_CONFIGS_DEFAULT_TIMEOUTDURATION
+              Value: 3s        
+            # ADOT Environment Variables
+            # TODO: parameterize service name and namespace
             - Name: OTEL_RESOURCE_ATTRIBUTES
               Value: service.name=sample-batch,service.namespace=demo
             - Name: OTEL_METRICS_EXPORTER
@@ -500,7 +511,8 @@ Resources:
               Value: !Ref AWS::Region       
             - Name: BATCH_SCHEDULE_TARGETID
               Value: SB_001   
-            #TODO: parameterize
+            # ADOT Environment Variables
+            # TODO: parameterize service name and namespace   
             - Name: OTEL_RESOURCE_ATTRIBUTES
               Value: service.name=sample-schedulelaunch,service.namespace=demo
             - Name: OTEL_METRICS_EXPORTER
