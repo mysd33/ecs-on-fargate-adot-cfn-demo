@@ -169,6 +169,8 @@ Resources:
           PortMappings:
             - ContainerPort: !FindInMap [FrontendAppTaskDefinitionMap, !Ref EnvironmentType, ContainerPort]
           Environment:
+            - Name: TZ
+              Value: Asia/Tokyo                      
             - Name: SPRING_PROFILES_ACTIVE
               Value: !FindInMap [FrontendAppTaskDefinitionMap, !Ref EnvironmentType, Profile]            
             - Name: API_BACKEND_URL
@@ -240,6 +242,9 @@ Resources:
               awslogs-group: !Ref FrontendFireLensLogGroup
               awslogs-region: !Ref "AWS::Region"
               awslogs-stream-prefix: !Ref StackPrefix
+          Environment:          
+            - Name: TZ
+              Value: Asia/Tokyo                
         - Name: aws-collector
           Image:
             Fn::ImportValue: !Sub ${StackPrefix}-AdotCollectorECRRepositoryUri          
@@ -252,6 +257,9 @@ Resources:
               awslogs-group: /ecs/ecs-aws-otel-sidecar-collector-fe
               awslogs-region: !Ref "AWS::Region"
               awslogs-stream-prefix: ecs                      
+          Environment:          
+            - Name: TZ
+              Value: Asia/Tokyo                
           HealthCheck:
             Command:
               - "/healthcheck"
@@ -291,6 +299,8 @@ Resources:
           PortMappings:
             - ContainerPort: !FindInMap [BackendServiceTaskDefinitionMap, !Ref EnvironmentType, ContainerPort]              
           Environment:
+            - Name: TZ
+              Value: Asia/Tokyo           
             - Name: SPRING_PROFILES_ACTIVE
               Value: !FindInMap [BackendServiceTaskDefinitionMap, !Ref EnvironmentType, Profile]
             - Name: SPRING_DATASOURCE_URL
@@ -338,6 +348,9 @@ Resources:
               awslogs-group: !Ref BackendFireLensLogGroup
               awslogs-region: !Ref "AWS::Region"
               awslogs-stream-prefix: !Ref StackPrefix
+          Environment:          
+            - Name: TZ
+              Value: Asia/Tokyo                
         - Name: aws-collector
           Image:
             Fn::ImportValue: !Sub ${StackPrefix}-AdotCollectorECRRepositoryUri            
@@ -350,6 +363,9 @@ Resources:
               awslogs-group: /ecs/ecs-aws-otel-sidecar-collector-be
               awslogs-region: !Ref "AWS::Region"
               awslogs-stream-prefix: ecs                      
+          Environment:          
+            - Name: TZ
+              Value: Asia/Tokyo                
           HealthCheck:
             Command:
               - "/healthcheck"
@@ -389,6 +405,8 @@ Resources:
           PortMappings:
             - ContainerPort: !FindInMap [BatchAppTaskDefinitionMap, !Ref EnvironmentType, ContainerPort]
           Environment:
+            - Name: TZ
+              Value: Asia/Tokyo          
             - Name: SPRING_PROFILES_ACTIVE
               Value: !FindInMap [BatchAppTaskDefinitionMap, !Ref EnvironmentType, Profile]            
             - Name: AWS_SQS_LISTENER_QUEUENAME
@@ -453,6 +471,9 @@ Resources:
               awslogs-group: !Ref BatchFireLensLogGroup
               awslogs-region: !Ref "AWS::Region"
               awslogs-stream-prefix: !Ref StackPrefix
+          Environment:          
+            - Name: TZ
+              Value: Asia/Tokyo                
         - Name: aws-collector
           Image:
             Fn::ImportValue: !Sub ${StackPrefix}-AdotCollectorECRRepositoryUri            
@@ -465,6 +486,9 @@ Resources:
               awslogs-group: /ecs/ecs-aws-otel-sidecar-collector-bt
               awslogs-region: !Ref "AWS::Region"
               awslogs-stream-prefix: ecs                      
+          Environment:          
+            - Name: TZ
+              Value: Asia/Tokyo                
           HealthCheck:
             Command:
               - "/healthcheck"
@@ -502,6 +526,8 @@ Resources:
             - SourceVolume: tmp                
               ContainerPath: /tmp              
           Environment:
+            - Name: TZ
+              Value: Asia/Tokyo          
             - Name: SPRING_PROFILES_ACTIVE
               Value: !FindInMap [ScheduleLaunchAppTaskDefinitionMap, !Ref EnvironmentType, Profile]            
             - Name: DELAYED_BATCH_QUEUES_SAMPLEBATCH_NAME
@@ -519,7 +545,7 @@ Resources:
               Value: none                  
           LogConfiguration:
             LogDriver: awsfirelens
-        - Name: batch_log_router
+        - Name: schedule_log_router
           Image: 
             Fn::ImportValue: !Sub ${StackPrefix}-ScheduleLaunchFluentBitECRRepositoryUri
           FirelensConfiguration:
@@ -533,6 +559,9 @@ Resources:
               awslogs-group: !Ref ScheduleLaunchFireLensLogGroup
               awslogs-region: !Ref "AWS::Region"
               awslogs-stream-prefix: !Ref StackPrefix 
+          Environment:          
+            - Name: TZ
+              Value: Asia/Tokyo                
         - Name: aws-collector
           Image:
             Fn::ImportValue: !Sub ${StackPrefix}-AdotCollectorECRRepositoryUri            
@@ -545,6 +574,9 @@ Resources:
               awslogs-group: /ecs/ecs-aws-otel-sidecar-collector-sl
               awslogs-region: !Ref "AWS::Region"
               awslogs-stream-prefix: ecs                      
+          Environment:          
+            - Name: TZ
+              Value: Asia/Tokyo                
           HealthCheck:
             Command:
               - "/healthcheck"
