@@ -543,13 +543,8 @@ aws cloudformation create-stack --stack-name Backend-CodeDeploy-Stack --template
 * Artifact用のS3バケット名を変えるには、それぞれのcfnスタック作成時のコマンドでパラメータを指定する
     * 「--parameters ParameterKey=ArtifactS3BucketName,ParameterValue=(バケット名)」  
 * 現状、テンプレート内の「DeploymentConfigName」が線形リリース（「CodeDeployDefault.ECSLinear10PercentEvery1Minutes」）になっているが、一度に切り替えたい場合は、通常のBlueGreenデプロイメント（CodeDeployDefault.ECSAllAtOnce）に変えるとよい。    
-### 2. BlueGreenデプロイメント対応のCodePipelineの作成
 
-> [!WARNING]
-> 以前、実施できたはずの、BFFアプリケーションのブルーグリーンデプロイメントが、なぜか、
-> 既に8080ポートが使用されている（Web server failed to start. Port 8080 was already in use.）というエラーが出てしまい
-> APが起動できず、が失敗する。  
-> なぜ8080ポートが重複するのは分からず、原因不明のため、試行錯誤中である。
+### 2. BlueGreenデプロイメント対応のCodePipelineの作成
 
 * BFFアプリケーション
 ```sh
