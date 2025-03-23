@@ -47,7 +47,14 @@
     * ADOT（AWS Distro for OpenTelemetry）を使って、X-RayによりアプリケーションやAWSサービス間の処理の流れをトレースし、可視化に対応。
     * ADOT Collectorをサイドカーコンテナとして配置。
         * ~~ADOTの場合、X-Rayのトレース情報だけでなく、StatsDのメトリックスもCloudWatchへ転送される。~~
-        * この例では、ADOTのデフォルトではCloudWatchに転送されるメトリックスについては不要として、エージェントおよびコレクタで転送を無効化している
+        * この例では、ADOTのデフォルトではCloudWatchに転送されるメトリックスについては不要として、エージェントおよびコレクタで転送を無効化している。また、ログについても同様にエージェントの転送を無効化している。
+            * エージェント（[参考1](https://opentelemetry.io/docs/languages/java/configuration/#properties-general)、[参考2](https://opentelemetry.io/docs/languages/java/configuration/#properties-exporters)）
+                * OTEL_PROPERGATORSをxrayに設定（DockerFile側に設定）
+                * OTEL_LOGS_EXPORTER環境変数をnoneに設定
+                * OTEL_METRICS_EXPORTER環境変数をnoneに設定
+            * コレクタ
+                * --config=/etc/ecs/ecs-xray.yamlの設定              
+
 ![X-Ray](img/xray.png)
 
     * X-Rayによる可視化
@@ -162,7 +169,7 @@ aws cloudformation create-stack --stack-name ScheduleLaunch-CodeBuild-Stack --te
 * 取得したMavenリポジトリをS3にキャッシュする。キャッシュ用のS3のパス（バケット名/プレフィックス）を変えるには、それぞれのcfnスタック作成時のコマンドでパラメータを指定する
     * 「--parameters ParameterKey=CacheS3Location,ParameterValue=(パス名)」
 
-* 本当は、CloudFormationテンプレートのCodeBuildのSorceTypeをCodePipelineにするが、いったんDockerイメージ作成して動作確認したいので、今はCodeCommitになっている。動いてはいるので保留。
+* 本当は、CloudFormationテンプレートのCodeBuildのSourceTypeをCodePipelineにするが、いったんDockerイメージ作成して動作確認したいので、今はCodeCommitになっている。動いてはいるので保留。
 
 
 ### 4. ECRへアプリケーションの最初のDockerイメージをプッシュ
