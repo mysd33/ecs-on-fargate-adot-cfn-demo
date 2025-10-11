@@ -35,8 +35,17 @@
         * BlueGreenデプロメント
 ![BlueGreenデプロイメント](img/ecs-bluegreen-deployment.png)
 
+!!! warning
+    [2025年7月](https://aws.amazon.com/jp/blogs/news/accelerate-safe-software-releases-with-new-built-in-blue-green-deployments-in-amazon-ecs/)よりECSの組み込みのBlueGreenデプロイメントが利用できるようになったが、本サンプルでは、CodeDeployを使った従来のBlueGreenデプロイメントのままとしている。  
+    今後、対応を検討。
+
 * メトリックスのモニタリング
     * CloudWatch Container Insightsは有効化し、各メトリックスを可視化。
+
+* JVM等のAPメトリクスのCloudWatchメトリクスの転送    
+    * Spring Cloud for AWSの機能を使って、Spring Actuatorで取得できるJVM等のAPのメトリクスをCloudWatchメトリクスと統合して転送できるようになっている。
+
+    ![CloudWatchメトリクス統合](img/cloudwatch-metrics.png)
 
 * ログの転送
     * awslogsドライバを使ったCloudWatch Logsへのログ転送とFireLens+Fluent Bitによるログ転送に対応。
@@ -66,10 +75,6 @@
 
     ![パラメータ外部化](img/ssmparam_scretsmaanger.png)
 
-* JVM等のAPメトリクスのCloudWatchメトリクスの転送    
-    * Spring Cloud for AWSの機能を使って、Spring Actuatorで取得できるJVM等のAPのメトリクスをCloudWatchメトリクスと統合して転送できるようになっている。
-
-    ![CloudWatchメトリクス統合](img/cloudwatch-metrics.png)
 
 * APのオートスケーリング
     * 平均CPU使用率のターゲット追跡スケーリングポリシーによる例に対応している。
@@ -281,12 +286,14 @@ aws cloudformation create-stack --stack-name Demo-SM-Stack --template-body file:
 ```
 * SecretsManagerが生成したパスワード等を確認しておく
 ```sh
-aws secretsmanager get-secret-value --secret-id Demo-RDS-Secrets
+aws secretsmanager get-secret-value --secret-id /secrets/database-secrets
 ```
 
 ### 2. Aurora Serverless v2 for PostgreSQLのクラスタの作成
 * 各サンプルAPではRDBでデータ管理するため、Aurora Serverless v2 for PostgreSQLを作成する。  
     * 作成にしばらく時間がかかる。（20分程度）
+    * 最小0ACUで、[自動一時停止機能](https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/aurora-serverless-v2-auto-pause.html)を有効化にすることでコストを抑えるようにしている。
+
 ```sh
 aws cloudformation validate-template --template-body file://cfn-rds-aurora.yaml
 aws cloudformation create-stack --stack-name ECS-Aurora-Stack --template-body file://cfn-rds-aurora.yaml
