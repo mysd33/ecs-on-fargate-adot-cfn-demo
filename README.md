@@ -63,11 +63,10 @@
                 * OTEL_METRICS_EXPORTER環境変数をnoneに設定
             * コレクタ
                 * --config=/etc/ecs/ecs-xray.yamlの設定              
-
-![X-Ray](img/xray.png)
+        ![X-Ray](img/xray.png)
 
     * X-Rayによる可視化
-![X-Ray可視化](img/xray-visualization.png)
+        ![X-Ray可視化](img/xray-visualization.png)
 
 * Systems Manager Paramter Store、Secrets Managerの利用
     * APの環境依存パラメータに関してSystems Manager Paramter Store、DBの認証情報に関してSecrets Managerを使って、アプリケーションの設定情報を外部化している。
