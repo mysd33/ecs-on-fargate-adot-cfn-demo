@@ -35,9 +35,9 @@
         * BlueGreenデプロメント
 ![BlueGreenデプロイメント](img/ecs-bluegreen-deployment.png)
 
-!!! warning
-    [2025年7月](https://aws.amazon.com/jp/blogs/news/accelerate-safe-software-releases-with-new-built-in-blue-green-deployments-in-amazon-ecs/)よりECSの組み込みのBlueGreenデプロイメントが利用できるようになったが、本サンプルでは、CodeDeployを使った従来のBlueGreenデプロイメントのままとしている。  
-    今後、対応を検討。
+> [!WARNING]
+>    [2025年7月](https://aws.amazon.com/jp/blogs/news/accelerate-safe-software-releases-with-new-built-in-blue-green-deployments-in-amazon-ecs/)よりECSの組み込みのBlueGreenデプロイメントが利用できるようになったが、本サンプルでは、CodeDeployを使った従来のBlueGreenデプロイメントのままとしている。  
+>    今後、対応を検討。
 
 * メトリックスのモニタリング
     * CloudWatch Container Insightsは有効化し、各メトリックスを可視化。
