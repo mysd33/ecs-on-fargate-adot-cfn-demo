@@ -202,6 +202,16 @@ docker tag public.ecr.aws/aws-observability/aws-otel-collector %AWS_ACCOUNT_ID%.
 docker push %AWS_ACCOUNT_ID%.dkr.ecr.%AWS_REGION%.amazonaws.com/aws-otel-collector:latest
 ```
 
+> [!NOTE]
+> 以下のような、メッセージが出ることがあるが、docker pullだと自分の環境のプラットフォームに合ったイメージがpullされるためである。  
+> ```
+> i Info → Not all multiplatform-content is present and only the available single-platform image was pushed  
+>         sha256:40a7eb9bfa58871d5d6dbdfcb146bc9d7eb4f149b42bd653809cd5b980af0cc4 -> sha256:9c48339d505aa6813be79a2ac3dc03fbc3d151aab1784a0a4cdbd10674991679  
+> ```
+> 本サンプルでは、異なるCPUアーキテクチャでの動作環境構築を実施していないため、特に問題はないが、
+> mulit-archのイメージECRにpushする場合には、docker buildxやskopeo等を使ってコピーする方法がある。
+>
+
 ### 6. （FireLens利用時のみ）Fluent BitのDockerイメージプッシュ
 * firelensフォルダにある「extra-for-backend.conf」、「extra-for-backend.conf」の設定ファイル中の「bucket」をログ出力用のS3バケット名に変える。
 * ログ転送にFireLensを利用する場合、サイドカーコンテナで使用するFluent BitのDockerイメージをビルドし、ECRにイメージをプッシュする。
