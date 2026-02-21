@@ -236,6 +236,7 @@ Resources:
           - sqs:ReceiveMessage
           - sqs:DeleteMessage
           - sqs:GetQueueUrl
+          - sqs:ChangeMessageVisibility
           Effect: Allow
           Resource:
           - !Sub arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:*
