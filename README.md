@@ -66,7 +66,8 @@
 * ログの転送
     * awslogsドライバを使ったCloudWatch Logsへのログ転送とFireLens+Fluent Bitによるログ転送に対応。
     * Firelensの場合はFirelensをサイドカーコンテナとして配置する必要がある。
-![ログドライバ](img/logdriver.png)
+
+        ![ログドライバ](img/logdriver.png)
 
 * X-Rayによる分散トレーシング・可視化
     * ADOT（AWS Distro for OpenTelemetry）を使って、X-RayによりアプリケーションやAWSサービス間の処理の流れをトレースし、可視化に対応。
@@ -93,7 +94,8 @@
 
 * APのオートスケーリング
     * 平均CPU使用率のターゲット追跡スケーリングポリシーによる例に対応している。
-![オートスケーリング](img/autoscaling.png)
+
+    ![オートスケーリング](img/autoscaling.png)
 
 * Auroraのリードレプリカ活用
     * オンライン処理方式のAPについてのDBアクセスのソフトウェアフレームワーク機能と連動し、読み取り専用のトランザクション（Springの@TransactionalのreadOnly属性がtrue）の処理では、動的にDB接続を切り替え、Aurora Serverless v2 for Postgresのリーダーエンドポイントに接続するようになっている。
