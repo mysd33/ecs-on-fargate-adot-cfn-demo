@@ -504,8 +504,8 @@ Resources:
               Value: none              
             - Name: OTEL_METRICS_EXPORTER
               Value: none
-            - Name: EXAMPLE_BATCH_SCHEDULE_TARGETID
-              Value: SB_001                                
+            #- Name: EXAMPLE_BATCH_SCHEDULE_TARGETID
+            #  Value: SB_001                                
           LogConfiguration:
             LogDriver: awsfirelens
         - Name: schedule_log_router
