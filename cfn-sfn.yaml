@@ -30,7 +30,7 @@ Resources:
         Fn::ImportValue: !Sub ${StackPrefix}-StepFunctionsExecutionRole-Arn
       DefinitionS3Location:
         Bucket: !Ref StateMachineDefinitionS3BucketName
-        Key: !Sub "${StateMachineDefinitionS3Prefix}/job900flow.asl.json"
+        Key: !Sub "${StateMachineDefinitionS3Prefix}/jobflow900.asl.yaml"
       DefinitionSubstitutions:
         job901_job_definition_arn:
           Fn::ImportValue:

@@ -8,12 +8,13 @@ States:
       JobDefinition: ${job901_job_definition_arn}
       JobQueue: ${job_queue_arn}
       EcsPropertiesOverride:
-        - Containers:
-            - Name: job901
-              Command:
-                - --spring.batch.job.name=job901
-                - inputData=input901
-                - "{% 'taskToken=' & $states.context.Task.Token %}"
+        TaskProperties:
+          - Containers:
+              - Name: job901
+                Command:
+                  - --spring.batch.job.name=job901
+                  - inputData=input901
+                  - "{% 'taskToken=' & $states.context.Task.Token %}"
     Next: job902
     Output:
       Job901Result: "{% $states.result %}"
@@ -29,12 +30,13 @@ States:
       JobDefinition: ${job902_job_definition_arn}
       JobQueue: ${job_queue_arn}
       EcsPropertiesOverride:
-        - Containers:
-            - Name: job902
-              Command:
-                - --spring.batch.job.name=job902
-                - "{% 'inputData=' & $states.input.Job901Result.result %}"
-                - "{% 'taskToken=' & $states.context.Task.Token %}"
+        TaskProperties:      
+          - Containers:
+              - Name: job902
+                Command:
+                  - --spring.batch.job.name=job902
+                  - "{% 'inputData=' & $states.input.Job901Result %}"
+                  - "{% 'taskToken=' & $states.context.Task.Token %}"
     Comment: |2-
         TODO:
         Set Job parameter from Event Bridge Scheduler ExecutionID

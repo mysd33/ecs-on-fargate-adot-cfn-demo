@@ -27,18 +27,21 @@
             ![ディレード処理イメージ](img/ecs-delayed.png) 
 
     * 純バッチ処理方式 （メッセージ連携）
-        * ディレード処理方式と同じ仕組みを利用し、スケジュールイベント（EventBridge）により起動したスケジュールバッチ起動用アプリケーションから、SQSを介したメッセージ連携により、バッチアプリケーションのジョブを実行する純バッチ処理にも対応している。 
+        * ディレード処理方式と同じ仕組みを利用し、スケジュールイベント（EventBridge Scheduler）により起動したスケジュールバッチ起動用アプリケーションから、SQSを介したメッセージ連携により、バッチアプリケーションのジョブを実行する純バッチ処理にも対応している。 
         
             ![純バッチ処理イメージ](img/ecs-batch.png) 
 
     * 純バッチ処理方式（ジョブフロー連携）
-        * スケジュールイベント（EventBridge）により起動したジョブフロー（StepFunctions）から、AWS Batch上でコマンドライン実行されるバッチアプリケーションのジョブを実行する純バッチ処理にも対応している。
+        * スケジュールイベント（EventBridge Scheduler）により起動したジョブフロー（StepFunctions）から、AWS Batch上でコマンドライン実行されるバッチアプリケーションのジョブを実行する純バッチ処理にも対応している。
         
             ![純バッチ処理イメージ](img/ecs-batch-jobflow.png)
 
-> [!WARNING]
->   Step Functionsを使ったサンプルは、実装中。
+        * フローのイメージ(Jobflow900)
 
+            ![ジョブフロー900](img/jobflow900.png)            
+
+> [!WARNING]
+>   今後、ParallelやMapを使った複雑なフロー制御も実装予定 
 
 * CI/CD
     * CodePipeline、CodeBuild、CodeDeployを使った、CI/CDに対応。
@@ -100,6 +103,7 @@
 * Auroraのリードレプリカ活用
     * オンライン処理方式のAPについてのDBアクセスのソフトウェアフレームワーク機能と連動し、読み取り専用のトランザクション（Springの@TransactionalのreadOnly属性がtrue）の処理では、動的にDB接続を切り替え、Aurora Serverless v2 for Postgresのリーダーエンドポイントに接続するようになっている。
     * これにより、Auroraのリードレプリカを活用することで、拡張性の高い構成を実現している。
+
 
 ## 事前準備
 ### S3バケットの作成
@@ -472,11 +476,14 @@ TBD
 
     ```sh
     aws cloudformation validate-template --template-body file://cfn-sfn.yaml
-    aws cloudformation create-stack --stack-name SFN-Stack --template-body file://cfn-sfn.yaml --parameters ParameterKey=StateMachineDefinitionS3BucketName,ParameterValue=(バケット名)
+    aws cloudformation create-stack --stack-name SFN-Stack --template-body file://cfn-sfn.yaml
     ```
 
     * ステートマシン定義ファイル格納先のS3バケット名を変えるには、それぞれのcfnスタック作成時のコマンドでパラメータを指定する
         * 「--parameters ParameterKey=StateMachineDefinitionS3BucketName,ParameterValue=(バケット名)」    
+
+    * ステートマシン定義ファイル格納先パスを変えるには、それぞれのcfnスタック作成時のコマンドでパラメータを指定する
+        * 「--parameters ParameterKey=StateMachineDefinitionS3Prefix,ParameterValue=(パス)」
 
 ### 5.3. EventBridge Schedulerによるステートマシンのスケジュール起動
 * TBD: 今後作成予定
