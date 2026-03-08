@@ -204,7 +204,7 @@ aws cloudformation create-stack --stack-name ScheduleLaunch-CodeBuild-Stack --te
 * バッチアプリケーション（ジョブフロー連携）
 ```sh
 aws cloudformation validate-template --template-body file://cfn-codebuild-batch-jobflow.yaml
-aws cloudformation create-stack --stack-name BatchJobFlow-CodeBuild-Stack --template-body file://cfn-codebuild-batch-jobflow.yaml
+aws cloudformation create-stack --stack-name BatchJobflow-CodeBuild-Stack --template-body file://cfn-codebuild-batch-jobflow.yaml
 ```
 
 * Artifact用のS3バケット名を変えるには、それぞれのcfnスタック作成時のコマンドでパラメータを指定する
@@ -441,7 +441,6 @@ aws cloudformation create-stack --stack-name ECS-SCHEDULE-EVENT-Stack --template
 ```
 
 ### 5. ジョブフローでのバッチ処理の起動
-
 #### 5.1 AWS Batchのジョブ定義等の作成
 ##### 5.1-1 ログ転送先がCloud Watch Logs（awslogsドライバ）の場合
 * awslogsドライバでのジョブ定義を作成
@@ -459,16 +458,34 @@ TBD
 ```
   
 #### 5.2 StepFunctionsのステートマシンの作成
-* TBD: 今後作成予定
-    * AWS BatchからStep Functionsの呼び出しに関する、VPC Endpoint、IAMロールの設定も必要になるはず
+* CloudFormation内で参照するStep Functionsのステートマシン定義ファイル（asl.yaml）を、S3にアップロードしあらかじめ格納しておく
+    * `(バケット名)/sfn`配下に配置することとする
+    * 最後のあとかたづけの際には、バケット内のファイルを削除する必要がある
+  
+    ```sh
+    #sfnフォルダ配下のファイルをすべてアップロードする場合
+    aws s3 cp sfn/ s3://(バケット名)/sfn/ --recursive
+    ```
 
-```sh
-TBD
-```
+* CloudFormationでステートマシンを作成
+    * バケット名を変更する場合に、パラメータで、ステートマシン定義ファイルのS3のバケット名を指定する
+
+    ```sh
+    aws cloudformation validate-template --template-body file://cfn-sfn.yaml
+    aws cloudformation create-stack --stack-name SFN-Stack --template-body file://cfn-sfn.yaml --parameters ParameterKey=StateMachineDefinitionS3BucketName,ParameterValue=(バケット名)
+    ```
+
+    * ステートマシン定義ファイル格納先のS3バケット名を変えるには、それぞれのcfnスタック作成時のコマンドでパラメータを指定する
+        * 「--parameters ParameterKey=StateMachineDefinitionS3BucketName,ParameterValue=(バケット名)」    
+
+### 5.3. EventBridge Schedulerによるステートマシンのスケジュール起動
+* TBD: 今後作成予定
+ 
 
 ### 6. APの実行確認
 * Backendアプリケーションの確認  
     * VPCのパブリックサブネット上にBationのEC2を起動
+    
     ```sh
     aws cloudformation validate-template --template-body file://cfn-bastion-ec2.yaml
     aws cloudformation create-stack --stack-name Demo-Bastion-Stack --template-body file://cfn-bastion-ec2.yaml
@@ -672,6 +689,51 @@ aws cloudformation create-stack --stack-name Batch-CodePipeline-Stack --template
 ### 4. ソースコードの変更
 * 何らかのソースコードの変更を加えて、CodeCommitにプッシュする
 * CodePipelineのパイプラインが実行され、新しいAPがデプロイされることを確認する
+
+## AWSリソースの削除
+
+```sh
+aws cloudformation delete-stack --stack-name Batch-CodePipeline-Stack
+aws cloudformation delete-stack --stack-name Backend-CodePipeline-Stack
+aws cloudformation delete-stack --stack-name Bff-CodePipeline-Stack
+aws cloudformation delete-stack --stack-name Backend-CodeDeploy-Stack
+aws cloudformation delete-stack --stack-name Bff-CodeDeploy-Stack
+
+aws cloudformation delete-stack --stack-name ECS-Bastion-Stack
+
+aws cloudformation delete-stack --stack-name SFN-Stack
+aws cloudformation delete-stack --stack-name AWS-BATCH-Stack
+
+aws cloudformation delete-stack --stack-name ECS-SCHEDULE-EVENT-Stack
+
+aws cloudformation delete-stack --stack-name ECS-AutoScaling-Stack
+aws cloudformation delete-stack --stack-name ECS-SERVICE-Stack
+aws cloudformation delete-stack --stack-name ECS-TASK-Stack
+aws cloudformation delete-stack --stack-name ECS-CLUSTER-Stack
+aws cloudformation delete-stack --stack-name ECS-SSM-PARAM-Stack
+aws cloudformation delete-stack --stack-name ECS-TB-BG-Stack
+aws cloudformation delete-stack --stack-name ECS-ALB-Stack
+aws cloudformation delete-stack --stack-name ECS-DYNAMODB-Stack
+aws cloudformation delete-stack --stack-name ECS-SQS-Stack
+aws cloudformation delete-stack --stack-name ECS-Aurora-Stack
+aws cloudformation delete-stack --stack-name ECS-SM-Stack
+aws cloudformation delete-stack --stack-name ECS-ECACHE-Stack
+aws cloudformation delete-stack --stack-name ECS-VPE-Stack 
+aws cloudformation delete-stack --stack-name ECS-SG-Stack
+aws cloudformation delete-stack --stack-name ECS-VPC-Stack
+
+aws cloudformation delete-stack --stack-name BatchJobflow-CodeBuild-Stack
+aws cloudformation delete-stack --stack-name ScheduleLaunch-CodeBuild-Stack
+aws cloudformation delete-stack --stack-name Batch-CodeBuild-Stack
+aws cloudformation delete-stack --stack-name Backend-CodeBuild-Stack
+aws cloudformation delete-stack --stack-name BFF-CodeBuild-Stack
+
+aws cloudformation delete-stack --stack-name ECS-IAM-Stack
+
+# ECRのリポジトリ内のイメージを全て削除後、コマンド実行
+aws cloudformation delete-stack --stack-name ECR-Stack
+
+```
 
 ## （参考）CloudFormationコマンド文法メモ
 * スタックの新規作成
