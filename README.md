@@ -455,7 +455,7 @@ aws cloudformation create-stack --stack-name ECS-SERVICE-Stack --template-body f
 
 ### 4. スケジュール起動でのバッチ処理ECS Taskの起動
 * スタックが作成されると、EventBridge Schedulerにより1分ごとにスケジュールバッチ起動用アプリケーションのコンテナが起動する
-    * サンプルAPの仕様上、バッチ起動するごとに登録データが増えていくので、動作確認できたらスタック削除するとよい。
+    * サンプルAPの仕様上、スケジュール経過後次々に実行されバッチ起動するごとに登録データが増えていくので、動作確認できたらスタック削除するとよい。
 ```sh
 aws cloudformation validate-template --template-body file://cfn-ecs-scheduleevent.yaml
 aws cloudformation create-stack --stack-name ECS-SCHEDULE-EVENT-Stack --template-body file://cfn-ecs-scheduleevent.yaml
@@ -508,7 +508,7 @@ TBD
         * 例）`{"ExecutionId":"1"}`
 
 ### 5.3. EventBridge Schedulerによるステートマシンのスケジュール起動
-
+* サンプルAPの仕様上、スケジュール経過後次々に実行されるので、動作確認できたらスタック削除するとよい。
 ```sh
 aws cloudformation validate-template --template-body file://cfn-sfn-scheduleevent.yaml
 aws cloudformation create-stack --stack-name SFN-SCHEDULE-Stack --template-body file://cfn-sfn-scheduleevent.yaml
