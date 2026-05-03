@@ -1,10 +1,10 @@
-# SpringBoot APをECS/Fargateで動作させCode系でCI/CDするCloudFormationサンプルテンプレート【ADOT版】
+# SpringBoot APをECS/Fargate等で動作させCode系でCI/CDするCloudFormationサンプルテンプレート【ADOT版】
 
 ## 構成
 * システム構成図
     * RDB(Aurora Serverless v2 for Postgres)のみ版
-        * SpringBootを用いた、BFFアプリケーション、Backendアプリケーション、バッチアプリケーション、スケジュールバッチ起動アプリケーションをECS上に実現した構成が構築される。
-            * ECSでリードオンリーコンテナで動作するようにしている
+        * SpringBootを用いた、BFFアプリケーション、Backendアプリケーション、メッセージ連携バッチアプリケーション、メッセージ連携用スケジュールバッチ起動アプリケーション、ジョブフロー連携バッチアプリケーションを実現した構成が構築される。
+            * ECS/Fargate、AWSBatch/Fargateでリードオンリーコンテナで動作するようにしている
         * 通常は、DBとして、RDB(Aurora Serveless v2 for Postgres)のみを使用した構成となっている。
         * なお、下図はECSからのAPログ転送にCloudWatch Logs（awslogsドライバ）を利用した場合の例記載しているが、後述の通り、FireLens+Fluent Bitによるログ転送にも対応している。           
 
@@ -36,6 +36,25 @@
         
             ![純バッチ処理イメージ](img/ecs-batch-jobflow.png)
 
+        * StepFunctionsによるジョブフロー実行制御のイメージ
+            * Jobflow900
+                * シンプルなジョブの順序実行の例
+
+                ![ジョブフロー900](img/jobflow900.png)            
+            
+            * Jobflow910
+                * Parallelを使ったジョブの並列実行の例
+
+                * TBD: 今後作成予定
+            
+            * Jobflow920
+                * Mapを使ったジョブの動的な多重実行の例
+
+                * TBD: 今後作成予定
+
+        > [!WARNING]
+        >   今後、ParallelやMapを使った複雑なフロー制御も実装予定             
+
 * CI/CD
     * CodePipeline、CodeBuild、CodeDeployを使った、CI/CDに対応。
     * CDは標準のローリングアップデートとBlueGreenデプロイメントの２つのリリース方式に対応している。（バッチAPは、ELB未使用のためローリングアップデートのみ対応）
@@ -51,75 +70,61 @@
 >    [2025年7月](https://aws.amazon.com/jp/blogs/news/accelerate-safe-software-releases-with-new-built-in-blue-green-deployments-in-amazon-ecs/)よりECSの組み込みのBlueGreenデプロイメントが利用できるようになったが、本サンプルでは、CodeDeployを使った従来のBlueGreenデプロイメントのままとしている。  
 >    今後、対応を検討。
 
-* メトリックスのモニタリング
-    * CloudWatch Container Insightsは有効化し、各メトリックスを可視化。
+* 性能・拡張性
+    * APの拡張性:オートスケーリング
+        * 平均CPU使用率のターゲット追跡スケーリングポリシーによる例に対応している。
 
-* JVM等のAPメトリクスのCloudWatchメトリクスの転送    
-    * Spring Cloud for AWSの機能を使って、Spring Actuatorで取得できるJVM等のAPのメトリクスをCloudWatchメトリクスと統合して転送できるようになっている。
+            ![オートスケーリング](img/autoscaling.png)
 
-    ![CloudWatchメトリクス統合](img/cloudwatch-metrics.png)
-
-* ログの転送
-    * awslogsドライバを使ったCloudWatch Logsへのログ転送とFireLens+Fluent Bitによるログ転送に対応。
-    * Firelensの場合はFirelensをサイドカーコンテナとして配置する必要がある。
-
-        ![ログドライバ](img/logdriver.png)
-
-* X-Rayによる分散トレーシング・可視化
-    * ADOT（AWS Distro for OpenTelemetry）を使って、X-RayによりアプリケーションやAWSサービス間の処理の流れをトレースし、可視化に対応。
-    * ADOT Collectorをサイドカーコンテナとして配置。
-        * ~~ADOTの場合、X-Rayのトレース情報だけでなく、StatsDのメトリックスもCloudWatchへ転送される。~~
-        * この例では、ADOTのデフォルトではCloudWatchに転送されるメトリックスについては不要として、エージェントおよびコレクタで転送を無効化している。また、ログについても同様にエージェントの転送を無効化している。
-            * エージェント（[参考1](https://opentelemetry.io/docs/languages/java/configuration/#properties-general)、[参考2](https://opentelemetry.io/docs/languages/java/configuration/#properties-exporters)）
-                * OTEL_PROPERGATORSをxrayに設定（DockerFile側に設定）
-                * OTEL_LOGS_EXPORTER環境変数をnoneに設定
-                * OTEL_METRICS_EXPORTER環境変数をnoneに設定
-            * コレクタ
-                * --config=/etc/ecs/ecs-xray.yamlの設定              
-        ![X-Ray](img/xray.png)
-
-    * X-Rayによる可視化
-        ![X-Ray可視化](img/xray-visualization.png)
-
-* Systems Manager Paramter Store、Secrets Managerの利用
-    * APの環境依存パラメータに関してSystems Manager Paramter Store、DBの認証情報に関してSecrets Managerを使って、アプリケーションの設定情報を外部化している。
-    * Spring Cloud for AWSの機能を使って、ECSのタスク定義の環境変数に値を設定することなく、直接APが値を取得し、Spring Bootのプロパティ管理と統合された形で利用できるようになっている。    
-
-    ![パラメータ外部化](img/ssmparam_scretsmaanger.png)
-
-
-* APのオートスケーリング
-    * 平均CPU使用率のターゲット追跡スケーリングポリシーによる例に対応している。
-
-    ![オートスケーリング](img/autoscaling.png)
-
-* Auroraのリードレプリカ活用
-    * オンライン処理方式のAPについてのDBアクセスのソフトウェアフレームワーク機能と連動し、読み取り専用のトランザクション（Springの@TransactionalのreadOnly属性がtrue）の処理では、動的にDB接続を切り替え、Aurora Serverless v2 for Postgresのリーダーエンドポイントに接続するようになっている。
-    * これにより、Auroraのリードレプリカを活用することで、拡張性の高い構成を実現している。
-
-* StepFunctionsによるジョブフロー実行制御のイメージ
-    * Jobflow900
-        * シンプルなジョブの順序実行の例
-
-        ![ジョブフロー900](img/jobflow900.png)            
+    * DBの拡張性:Auroraのリードレプリカ活用
+        * オンライン処理方式のAPについてのDBアクセスのソフトウェアフレームワーク機能と連動し、読み取り専用のトランザクション（Springの@TransactionalのreadOnly属性がtrue）の処理では、動的にDB接続を切り替え、Aurora Serverless v2 for Postgresのリーダーエンドポイントに接続するようになっている。
+        * これにより、Auroraのリードレプリカを活用することで、拡張性の高い構成を実現している。
     
-    * Jobflow910
-        * Parallelを使ったジョブの並列実行の例
+            ![リードレプリカ活用](img/aurora-read-replica.png)
 
-        * TBD: 今後作成予定
-    
-    * Jobflow920
-        * Mapを使ったジョブの動的な多重実行の例
+* 環境依存パラメータの外部管理化
+    * Systems Manager Paramter Store、Secrets Managerの利用
+        * APの環境依存パラメータに関してSystems Manager Paramter Store、DBの認証情報に関してSecrets Managerを使って、アプリケーションの設定情報を外部化している。
+        * Spring Cloud for AWSの機能を使って、ECSのタスク定義の環境変数に値を設定することなく、直接APが値を取得し、Spring Bootのプロパティ管理と統合された形で利用できるようになっている。    
 
-        * TBD: 今後作成予定
+            ![パラメータ外部化](img/ssmparam_scretsmaanger.png)
 
-> [!WARNING]
->   今後、ParallelやMapを使った複雑なフロー制御も実装予定 
+* オブザーバビリティ（定量的可視化）
+    * ログの転送
+        * awslogsドライバを使ったCloudWatch Logsへのログ転送とFireLens+Fluent Bitによるログ転送に対応。
+        * Firelensの場合はFirelensをサイドカーコンテナとして配置する必要がある。
 
+            ![ログドライバ](img/logdriver.png)
+
+    * APメトリクスのCloudWatchメトリクスの転送・モニタリング
+        * Spring Cloud for AWSの機能を使って、Spring Actuatorで取得できるJVM等のAPのメトリクスをCloudWatchメトリクスと統合して転送できるようになっている。
+
+            ![CloudWatchメトリクス統合](img/cloudwatch-metrics.png)
+
+    * クラウドサービスのメトリックスのモニタリング
+        * CloudWatch Container Insightsは有効化し、各メトリックスを可視化。
+
+    * X-Rayによる分散トレーシング・可視化
+        * ADOT（AWS Distro for OpenTelemetry）を使って、X-RayによりアプリケーションやAWSサービス間の処理の流れをトレースし、可視化に対応。
+        * ADOT Collectorをサイドカーコンテナとして配置。
+            * ~~ADOTの場合、X-Rayのトレース情報だけでなく、StatsDのメトリックスもCloudWatchへ転送される。~~
+            * この例では、ADOTのデフォルトではCloudWatchに転送されるメトリックスについては不要として、エージェントおよびコレクタで転送を無効化している。また、ログについても同様にエージェントの転送を無効化している。
+                * エージェント（[参考1](https://opentelemetry.io/docs/languages/java/configuration/#properties-general)、[参考2](https://opentelemetry.io/docs/languages/java/configuration/#properties-exporters)）
+                    * OTEL_PROPERGATORSをxrayに設定（DockerFile側に設定）
+                    * OTEL_LOGS_EXPORTER環境変数をnoneに設定
+                    * OTEL_METRICS_EXPORTER環境変数をnoneに設定
+                * コレクタ
+                    * --config=/etc/ecs/ecs-xray.yamlの設定
+
+            ![X-Ray](img/xray.png)
+
+        * X-Rayによる可視化
+        
+            ![X-Ray可視化](img/xray-visualization.png)
 
 ## 事前準備
 ### S3バケットの作成
-* 以下の目的に利用するS3バケットを用意しておく。1つでも、目的ごと別々に３つ用意してもよい。
+* 以下の目的に利用するS3バケットを用意しておく。1つでも、目的ごとで別々に３つ用意してもよい。
     * CodePipeline、CodeBuildのArtifact用、キャッシュ用のS3バケット
     * BFFアプリケーション、バッチアプリケーションでファイルを連携するためのS3バケット
     * （FireLensを利用する場合）ログ出力のS3バケット
