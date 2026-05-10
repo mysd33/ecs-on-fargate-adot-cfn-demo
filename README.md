@@ -1,140 +1,149 @@
 # SpringBoot APをECS/Fargate等で動作させCode系でCI/CDするCloudFormationサンプルテンプレート【ADOT版】
 
-## 構成
-* システム構成図
-    * RDB(Aurora Serverless v2 for Postgres)のみ版
-        * SpringBootを用いた、BFFアプリケーション、Backendアプリケーション、メッセージ連携バッチアプリケーション、メッセージ連携用スケジュールバッチ起動アプリケーション、ジョブフロー連携バッチアプリケーションを実現した構成が構築される。
-            * ECS/Fargate、AWSBatch/Fargateでリードオンリーコンテナで動作するようにしている
-        * 通常は、DBとして、RDB(Aurora Serveless v2 for Postgres)のみを使用した構成となっている。
-        * なお、下図はECSからのAPログ転送にCloudWatch Logs（awslogsドライバ）を利用した場合の例記載しているが、後述の通り、FireLens+Fluent Bitによるログ転送にも対応している。           
+## 1. 構成
+### 1.1. システム構成図
+* RDB(Aurora Serverless v2 for Postgres)のみ版
+    * SpringBootを用いた、BFFアプリケーション、Backendアプリケーション、メッセージ連携バッチアプリケーション、メッセージ連携用スケジュールバッチ起動アプリケーション、ジョブフロー連携バッチアプリケーションを実現した構成が構築される。
+        * ECS/Fargate、AWSBatch/Fargateでリードオンリーコンテナで動作するようにしている
+    * 通常は、DBとして、RDB(Aurora Serveless v2 for Postgres)のみを使用した構成となっている。
+    * なお、下図はECSからのAPログ転送にCloudWatch Logs（awslogsドライバ）を利用した場合の例記載しているが、後述の通り、FireLens+Fluent Bitによるログ転送にも対応している。           
 
-            ![システム構成図](img/ecs.png)    
+        ![システム構成図](img/ecs.png)    
 
-    * DynamoDB併用版
-        * BackendアプリケーションをDynamoDBアクセス版のサンプルAPに差し変えることで、ECSからDynamoDBへのアクセスも実現した構成が構築できる。
+* DynamoDB併用版
+    * BackendアプリケーションをDynamoDBアクセス版のサンプルAPに差し変えることで、ECSからDynamoDBへのアクセスも実現した構成が構築できる。
 
-            ![システム構成図](img/ecs-dynamodb.png)      
+        ![システム構成図](img/ecs-dynamodb.png)      
 
-* 処理方式
-    * オンラインリアルタイム処理方式
-        * BFFアプリケーションからBackendアプリケーションがAPI連携しつつユーザへUIを提供するオンラインリアルタイム処理を実現した構成が構築される
+### 1.2. 処理方式
+* オンラインリアルタイム処理方式
+    * BFFアプリケーションからBackendアプリケーションがAPI連携しつつユーザへUIを提供するオンラインリアルタイム処理を実現した構成が構築される
 
-            ![オンラインリアルタイム処理イメージ](img/ecs-online.png) 
+        ![オンラインリアルタイム処理イメージ](img/ecs-online.png) 
 
-    * ディレード処理方式    
-        * BFFアプリケーションから、SQSを介したメッセージ連携により、バッチアプリケーションのジョブを非同期で実行するディレード処理にも対応している。
+* ディレード処理方式    
+    * BFFアプリケーションから、SQSを介したメッセージ連携により、バッチアプリケーションのジョブを非同期で実行するディレード処理にも対応している。
 
-            ![ディレード処理イメージ](img/ecs-delayed.png) 
+        ![ディレード処理イメージ](img/ecs-delayed.png) 
 
-    * 純バッチ処理方式 （メッセージ連携）
-        * ディレード処理方式と同じ仕組みを利用し、スケジュールイベント（EventBridge Scheduler）により起動したスケジュールバッチ起動用アプリケーションから、SQSを介したメッセージ連携により、バッチアプリケーションのジョブを実行する純バッチ処理にも対応している。 
-        
-            ![純バッチ処理イメージ](img/ecs-batch.png) 
+* 純バッチ処理方式 （メッセージ連携）
+    * ディレード処理方式と同じ仕組みを利用し、スケジュールイベント（EventBridge Scheduler）により起動したスケジュールバッチ起動用アプリケーションから、SQSを介したメッセージ連携により、バッチアプリケーションのジョブを実行する純バッチ処理にも対応している。 
+    
+        ![純バッチ処理イメージ](img/ecs-batch.png) 
 
-    * 純バッチ処理方式（ジョブフロー連携）
-        * スケジュールイベント（EventBridge Scheduler）により起動したジョブフロー（StepFunctions）から、AWS Batch上でコマンドライン実行されるバッチアプリケーションのジョブを実行する純バッチ処理にも対応している。
-        
-            ![純バッチ処理イメージ](img/ecs-batch-jobflow.png)
-
-        * StepFunctionsによるジョブフロー実行制御のイメージ
-            * Jobflow900
-                * シンプルなジョブの順序実行の例
-
-                ![ジョブフロー900](img/jobflow900.png)            
-            
-            * Jobflow910
-                * Parallelを使ったジョブの並列実行の例
-
-                * TBD: 今後作成予定
-            
-            * Jobflow920
-                * Mapを使ったジョブの動的な多重実行の例
-
-                * TBD: 今後作成予定
+* 純バッチ処理方式（ジョブフロー連携）
+    * スケジュールイベント（EventBridge Scheduler）により起動したジョブフロー（StepFunctions）から、AWS Batch上でコマンドライン実行されるバッチアプリケーションのジョブを実行する純バッチ処理にも対応している。
+    
+        ![純バッチ処理イメージ](img/ecs-batch-jobflow.png)
 
 
-* CI/CD
-    * CodePipeline、CodeBuild、CodeDeployを使った、CI/CDに対応。
-    * CDは標準のローリングアップデートとBlueGreenデプロイメントの２つのリリース方式に対応している。（バッチAPは、ELB未使用のためローリングアップデートのみ対応）
-        * ローリングアップデート
+### 1.3. StepFunctionsによるジョブフロー実行制御
+* [Jobflow900](sfn/jobflow900.asl.yaml)
+    * シンプルなジョブの順序実行の例
 
-            ![ローリングアップデート](img/ecs-rolling-update.png)
+    ![ジョブフロー900](img/jobflow900.png)
 
-        * BlueGreenデプロイメント
+* [Jobflow910](sfn/jobflow910.asl.yaml)
+    * Parallelを使ったジョブの並列実行の例
 
-            ![BlueGreenデプロイメント](img/ecs-bluegreen-deployment.png)
+    ![ジョブフロー910](img/jobflow910.png)
+
+* [Jobflow920](sfn/jobflow920.asl.yaml)
+    * Mapを使ったジョブの動的な多重実行の例
+
+    ![ジョブフロー920](img/jobflow920.png)
+
+    * Map内の実行結果1（この例では3件の子ワークフローを実行）
+
+    ![ジョブフロー920_Map1](img/jobflow920_map1.png)
+
+    * Map内の実行結果2（このうち1件の子ワークフローの実行結果の例）
+
+    ![ジョブフロー920_Map2](img/jobflow920_map2.png)
+    
+
+### 1.4. CI/CD
+* CodePipeline、CodeBuild、CodeDeployを使った、CI/CDに対応。
+* CDは標準のローリングアップデートとBlueGreenデプロイメントの２つのリリース方式に対応している。（バッチAPは、ELB未使用のためローリングアップデートのみ対応）
+    * ローリングアップデート
+
+        ![ローリングアップデート](img/ecs-rolling-update.png)
+
+    * BlueGreenデプロイメント
+
+        ![BlueGreenデプロイメント](img/ecs-bluegreen-deployment.png)
 
 > [!WARNING]
 >    [2025年7月](https://aws.amazon.com/jp/blogs/news/accelerate-safe-software-releases-with-new-built-in-blue-green-deployments-in-amazon-ecs/)よりECSの組み込みのBlueGreenデプロイメントが利用できるようになったが、本サンプルでは、CodeDeployを使った従来のBlueGreenデプロイメントのままとしている。  
 >    今後、対応を検討。
 
-* 性能・拡張性
-    * APの拡張性:オートスケーリング
-        * 平均CPU使用率のターゲット追跡スケーリングポリシーによる例に対応している。
+### 1.5. 性能・拡張性対策
+* APの拡張性:オートスケーリング
+    * 平均CPU使用率のターゲット追跡スケーリングポリシーによる例に対応している。
 
-            ![オートスケーリング](img/autoscaling.png)
+        ![オートスケーリング](img/autoscaling.png)
 
-    * DBの拡張性:Auroraのリードレプリカ活用
-        * オンライン処理方式のAPについてのDBアクセスのソフトウェアフレームワーク機能と連動し、読み取り専用のトランザクション（Springの@TransactionalのreadOnly属性がtrue）の処理では、動的にDB接続を切り替え、Aurora Serverless v2 for Postgresのリーダーエンドポイントに接続するようになっている。
-        * これにより、Auroraのリードレプリカを活用することで、拡張性の高い構成を実現している。
+* DBの拡張性:Auroraのリードレプリカ活用
+    * オンライン処理方式のAPについてのDBアクセスのソフトウェアフレームワーク機能と連動し、読み取り専用のトランザクション（Springの@TransactionalのreadOnly属性がtrue）の処理では、動的にDB接続を切り替え、Aurora Serverless v2 for Postgresのリーダーエンドポイントに接続するようになっている。
+    * これにより、Auroraのリードレプリカを活用することで、拡張性の高い構成を実現している。
+
+        ![リードレプリカ活用](img/aurora-read-replica.png)
+
+### 1.6. 環境依存パラメータの外部管理化
+* Systems Manager Paramter Store、Secrets Managerの利用
+    * APの環境依存パラメータに関してSystems Manager Paramter Store、DBの認証情報に関してSecrets Managerを使って、アプリケーションの設定情報を外部化している。
+    * Spring Cloud for AWSの機能を使って、ECSのタスク定義の環境変数に値を設定することなく、直接APが値を取得し、Spring Bootのプロパティ管理と統合された形で利用できるようになっている。    
+
+        ![パラメータ外部化](img/ssmparam_scretsmaanger.png)
+
+### 1.7. オブザーバビリティ（定量的可視化）
+* ログの転送
+    * awslogsドライバを使ったCloudWatch Logsへのログ転送とFireLens+Fluent Bitによるログ転送に対応。
+    * Firelensの場合はFirelensをサイドカーコンテナとして配置する必要がある。
+
+        ![ログドライバ](img/logdriver.png)
+
+* APメトリクスのCloudWatchメトリクスの転送・モニタリング
+    * Spring Cloud for AWSの機能を使って、Spring Actuatorで取得できるJVM等のAPのメトリクスをCloudWatchメトリクスと統合して転送できるようになっている。
+
+        ![CloudWatchメトリクス統合](img/cloudwatch-metrics.png)
+
+* クラウドサービスのメトリックスのモニタリング
+    * CloudWatch Container Insightsは有効化し、各メトリックスを可視化。
+
+* X-Rayによる分散トレーシング・可視化
+    * ADOT（AWS Distro for OpenTelemetry）を使って、X-RayによりアプリケーションやAWSサービス間の処理の流れをトレースし、可視化に対応。
+    * ADOT Collectorをサイドカーコンテナとして配置。
+        * ~~ADOTの場合、X-Rayのトレース情報だけでなく、StatsDのメトリックスもCloudWatchへ転送される。~~
+        * この例では、ADOTのデフォルトではCloudWatchに転送されるメトリックスについては不要として、エージェントおよびコレクタで転送を無効化している。また、ログについても同様にエージェントの転送を無効化している。
+            * エージェント（[参考1](https://opentelemetry.io/docs/languages/java/configuration/#properties-general)、[参考2](https://opentelemetry.io/docs/languages/java/configuration/#properties-exporters)）
+                * OTEL_PROPERGATORSをxrayに設定（DockerFile側に設定）
+                * OTEL_LOGS_EXPORTER環境変数をnoneに設定
+                * OTEL_METRICS_EXPORTER環境変数をnoneに設定
+            * コレクタ
+                * --config=/etc/ecs/ecs-xray.yamlの設定
+
+        ![X-Ray](img/xray.png)
+
+    * X-Rayによる可視化
     
-            ![リードレプリカ活用](img/aurora-read-replica.png)
+        ![X-Ray可視化](img/xray-visualization.png)
 
-* 環境依存パラメータの外部管理化
-    * Systems Manager Paramter Store、Secrets Managerの利用
-        * APの環境依存パラメータに関してSystems Manager Paramter Store、DBの認証情報に関してSecrets Managerを使って、アプリケーションの設定情報を外部化している。
-        * Spring Cloud for AWSの機能を使って、ECSのタスク定義の環境変数に値を設定することなく、直接APが値を取得し、Spring Bootのプロパティ管理と統合された形で利用できるようになっている。    
-
-            ![パラメータ外部化](img/ssmparam_scretsmaanger.png)
-
-* オブザーバビリティ（定量的可視化）
-    * ログの転送
-        * awslogsドライバを使ったCloudWatch Logsへのログ転送とFireLens+Fluent Bitによるログ転送に対応。
-        * Firelensの場合はFirelensをサイドカーコンテナとして配置する必要がある。
-
-            ![ログドライバ](img/logdriver.png)
-
-    * APメトリクスのCloudWatchメトリクスの転送・モニタリング
-        * Spring Cloud for AWSの機能を使って、Spring Actuatorで取得できるJVM等のAPのメトリクスをCloudWatchメトリクスと統合して転送できるようになっている。
-
-            ![CloudWatchメトリクス統合](img/cloudwatch-metrics.png)
-
-    * クラウドサービスのメトリックスのモニタリング
-        * CloudWatch Container Insightsは有効化し、各メトリックスを可視化。
-
-    * X-Rayによる分散トレーシング・可視化
-        * ADOT（AWS Distro for OpenTelemetry）を使って、X-RayによりアプリケーションやAWSサービス間の処理の流れをトレースし、可視化に対応。
-        * ADOT Collectorをサイドカーコンテナとして配置。
-            * ~~ADOTの場合、X-Rayのトレース情報だけでなく、StatsDのメトリックスもCloudWatchへ転送される。~~
-            * この例では、ADOTのデフォルトではCloudWatchに転送されるメトリックスについては不要として、エージェントおよびコレクタで転送を無効化している。また、ログについても同様にエージェントの転送を無効化している。
-                * エージェント（[参考1](https://opentelemetry.io/docs/languages/java/configuration/#properties-general)、[参考2](https://opentelemetry.io/docs/languages/java/configuration/#properties-exporters)）
-                    * OTEL_PROPERGATORSをxrayに設定（DockerFile側に設定）
-                    * OTEL_LOGS_EXPORTER環境変数をnoneに設定
-                    * OTEL_METRICS_EXPORTER環境変数をnoneに設定
-                * コレクタ
-                    * --config=/etc/ecs/ecs-xray.yamlの設定
-
-            ![X-Ray](img/xray.png)
-
-        * X-Rayによる可視化
-        
-            ![X-Ray可視化](img/xray-visualization.png)
-
-## 事前準備
-### S3バケットの作成
+## 2. 事前準備
+### 2.1. S3バケットの作成
 * 以下の目的に利用するS3バケットを用意しておく。1つでも、目的ごとで別々に３つ用意してもよい。
     * CodePipeline、CodeBuildのArtifact用、キャッシュ用のS3バケット
     * BFFアプリケーション、バッチアプリケーションでファイルを連携するためのS3バケット
     * （FireLensを利用する場合）ログ出力のS3バケット
 * 後続の手順で、バケット名を変更するパラメータがあるところで指定する
 
-## CloudFormationのコマンドの実行
+## 3. CloudFormationのコマンドの実行
 * 以降で、AWS CLIのコマンドを使用して、CloudFormationでAWSリソースを作成していく。
 * ここでは、aws cloudformation create-stackコマンドを使っているが、deployコマンド等、使う場合は適宜コマンドを読み替えて実行すること
     * 詳細は[（参考）CloudFormationコマンド文法メモ](#参考cloudformationコマンド文法メモ)を参照
 
-## IAM構築
-### 1. IAMの作成
+## 4. IAM構築
+### 4.1. IAMの作成
 * BackendアプリケーションがRDBアクセス版の場合
 ```sh
 aws cloudformation validate-template --template-body file://cfn-iam.yaml
@@ -152,8 +161,8 @@ aws cloudformation create-stack --stack-name ECS-IAM-Stack --template-body file:
     
 * TBD:　IAMポリシーの記載は精査中
 
-## CI環境構築
-### 1. アプリケーションのCodeCommit環境
+## 5. CI環境構築
+### 5.1. アプリケーションのCodeCommit環境
 * 以下のSpringBootAPのプロジェクトを以下のリポジトリ名でCodeCommitに格納する
     * sample-bff
         * BFFのAP
@@ -179,7 +188,7 @@ aws cloudformation create-stack --stack-name ECS-IAM-Stack --template-body file:
         * Githubに同名の資材があるので、これをCodeCommitに格納する
             * [sample-batch-jobflow](https://github.com/mysd33/sample-batch-jobflow)
 
-### 2. ECRの作成
+### 5.2. ECRの作成
 ```sh
 aws cloudformation validate-template --template-body file://cfn-ecr.yaml
 aws cloudformation create-stack --stack-name ECR-Stack --template-body file://cfn-ecr.yaml
@@ -187,7 +196,7 @@ aws cloudformation create-stack --stack-name ECR-Stack --template-body file://cf
 
 * 5つのSpringBootAP用のリポジトリと、ADOT Collector用のリポジトリ、ログ転送にFireLens利用時の各AP向けFluentBit用のリポジトリが作成される。
 
-### 3. CodeBuildのプロジェクト作成
+### 5.3. CodeBuildのプロジェクト作成
 * BFFアプリケーション
 ```sh
 aws cloudformation validate-template --template-body file://cfn-codebuild-bff.yaml
@@ -235,11 +244,11 @@ aws cloudformation create-stack --stack-name BatchJobflow-CodeBuild-Stack --temp
 * 本当は、CloudFormationテンプレートのCodeBuildのSourceTypeをCodePipelineにするが、いったんDockerイメージ作成して動作確認したいので、今はCodeCommitになっている。動いてはいるので保留。
 
 
-### 4. ECRへアプリケーションの最初のDockerイメージをプッシュ
+### 5.4. ECRへアプリケーションの最初のDockerイメージをプッシュ
 * 4つのCodeBuildプロジェクトが作成されるので、それぞれビルド実行し、ECRにDockerイメージをプッシュさせる。
 
 
-### 5. ADOT CollectorのDockerイメージプッシュ
+### 5.5. ADOT CollectorのDockerイメージプッシュ
 * ADOTでX-Rayを利用し分散トレーシングおよび可視化を実施するため、Public GalleryにあるADOT Collectorのイメージをいったん、自分のECRに持ってきてpush
 
 * 以下、コマンドを実行
@@ -264,7 +273,7 @@ docker push %AWS_ACCOUNT_ID%.dkr.ecr.%AWS_REGION%.amazonaws.com/aws-otel-collect
 > mulit-archのイメージをECRにpushする場合には、docker buildxやskopeo等を使ってコピーする方法がある。
 >
 
-### 6. （FireLens利用時のみ）Fluent BitのDockerイメージプッシュ
+### 5.6. （FireLens利用時のみ）Fluent BitのDockerイメージプッシュ
 * firelensフォルダにある「extra-for-backend.conf」、「extra-for-backend.conf」の設定ファイル中の「bucket」をログ出力用のS3バケット名に変える。
 * ログ転送にFireLensを利用する場合、サイドカーコンテナで使用するFluent BitのDockerイメージをビルドし、ECRにイメージをプッシュする。
 * 以下、コマンドを実行
@@ -292,14 +301,14 @@ docker tag fluent-bit-schedulelaunch:latest %AWS_ACCOUNT_ID%.dkr.ecr.%AWS_REGION
 docker push %AWS_ACCOUNT_ID%.dkr.ecr.%AWS_REGION%.amazonaws.com/fluent-bit-schedulelaunch:latest
 ```
 
-## ネットワーク環境構築
-### 1. VPCおよびサブネット、Publicサブネット向けInternetGateway等の作成
+## 6. ネットワーク環境構築
+### 6.1. VPCおよびサブネット、Publicサブネット向けInternetGateway等の作成
 ```sh
 cd ..
 aws cloudformation validate-template --template-body file://cfn-vpc.yaml
 aws cloudformation create-stack --stack-name ECS-VPC-Stack --template-body file://cfn-vpc.yaml
 ```
-### 2. Security Groupの作成
+### 6.2. Security Groupの作成
 ```sh
 aws cloudformation validate-template --template-body file://cfn-sg.yaml
 aws cloudformation create-stack --stack-name ECS-SG-Stack --template-body file://cfn-sg.yaml
@@ -307,12 +316,12 @@ aws cloudformation create-stack --stack-name ECS-SG-Stack --template-body file:/
 * 必要に応じて、端末の接続元IPアドレス等のパラメータを指定
     * 「--parameters ParameterKey=TerminalCidrIP,ParameterValue=X.X.X.X/X」
 
-### 3. VPC Endpointの作成とプライベートサブネットのルートテーブル更新
+### 6.3. VPC Endpointの作成とプライベートサブネットのルートテーブル更新
 ```sh
 aws cloudformation validate-template --template-body file://cfn-vpe.yaml
 aws cloudformation create-stack --stack-name ECS-VPE-Stack --template-body file://cfn-vpe.yaml
 ```
-### 4.（作成任意）NAT Gatewayの作成とプライベートサブネットのルートテーブル更新
+### 6.4. 4.（作成任意）NAT Gatewayの作成とプライベートサブネットのルートテーブル更新
 * 本手順では、ECRのイメージ転送量等にかかるNAT Gatewayのコスト節約から、全てVPC Endpointで作成するので、NAT Gatewayは通常不要。
     * とはいえ、全部VPC Endpointにすると、エンドポイント数分、デモ程度で何度も起動したり落としたりで1時間未満でも時間単位課金でコストがかえって結構かかる場合もある。その場合の調整として、本手順のVPC Endpoint作成対象を減らす等カスタマイズして、VPC Endpoint未作成のリソースアクセスに使用するために以下を追加実行すればよい。
 
@@ -321,8 +330,8 @@ aws cloudformation validate-template --template-body file://cfn-ngw.yaml
 aws cloudformation create-stack --stack-name ECS-NATGW-Stack --template-body file://cfn-ngw.yaml
 ```
 
-## キャッシュサーバ環境構築
-### 1. ElastiCache for Valkey(Redis互換)のクラスタ作成
+## 7. キャッシュサーバ環境構築
+### 7.1. ElastiCache for Valkey(Redis互換)のクラスタ作成
 * BFFのAP(sample-bff)ではHTTPセッションを扱うがスケールイン/アウトにも対応できるようセッションを外部化し管理するために、ElasticCache for Valkey（クラスタモード無効）を作成する。
     * 作成にしばらく時間がかかる。
     * RedisのKeyspace-Notificationを有効化して、キーの有効期限切れ（セッションタイムアウト）の検知ができるようにするため、パラメータグループに「notify-keyspace-events: gxE」指定
@@ -338,8 +347,8 @@ aws cloudformation create-stack --stack-name ECS-ECACHE-Stack --template-body fi
 > https://zenn.dev/ktny/articles/9ccd18cd19c26d
 > https://ca-srg.dev/6d99a5ff263346cbaebec589ee744db1
 
-## RDB環境構築
-### 1. Secrets Managerの作成
+## 8. RDB環境構築
+### 8.1. Secrets Managerの作成
 * Auroraの認証情報をSecretsManagerに作成する。
 ```sh
 aws cloudformation validate-template --template-body file://cfn-secrets.yaml
@@ -350,7 +359,7 @@ aws cloudformation create-stack --stack-name ECS-SM-Stack --template-body file:/
 aws secretsmanager get-secret-value --secret-id /secrets/database-secrets
 ```
 
-### 2. Aurora Serverless v2 for PostgreSQLのクラスタの作成
+### 8.2. Aurora Serverless v2 for PostgreSQLのクラスタの作成
 * 各サンプルAPではRDBでデータ管理するため、Aurora Serverless v2 for PostgreSQLを作成する。  
     * 作成にしばらく時間がかかる。（20分程度）
     * 最小0ACUで、[自動一時停止機能](https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/aurora-serverless-v2-auto-pause.html)を有効化にすることでコストを抑えるようにしている。
@@ -360,22 +369,22 @@ aws cloudformation validate-template --template-body file://cfn-rds-aurora.yaml
 aws cloudformation create-stack --stack-name ECS-Aurora-Stack --template-body file://cfn-rds-aurora.yaml
 ```
 
-## SQS環境構築
-### 1. SQSの作成
+## 9. SQS環境構築
+### 9.1. SQSの作成
 ```sh
 aws cloudformation validate-template --template-body file://cfn-sqs.yaml
 aws cloudformation create-stack --stack-name ECS-SQS-Stack --template-body file://cfn-sqs.yaml
 ```
 
-## DynamoDB環境構築
-### 1. DynamoDBのホテルテーブル作成
+## 10. DynamoDB環境構築
+### 10.1. DynamoDBのホテルテーブル作成
 ```sh
 aws cloudformation validate-template --template-body file://cfn-dynamodb.yaml
 aws cloudformation create-stack --stack-name ECS-DYNAMODB-Stack --template-body file://cfn-dynamodb.yaml
 ```
 
-## ロードバランサ環境構築
-### 1. ALBの作成
+## 11. ロードバランサ環境構築
+### 11.1. ALBの作成
 * ECSの前方で動作するALBとデフォルトのTarget Group等を作成
     * （ローリングアップデートの場合）パラメータTargateGroupAttributesに「deregistration_delay.timeout_seconds」を「60」で設定し、ローリングアップデートの時間を短縮する工夫している。
     * 実機確認し設定しているが、AP起動が遅くヘルスチェックに失敗する場合には、パラメータ「HealthCheckIntervalSeconds」の値を長く調整するとよい。
@@ -397,8 +406,8 @@ aws cloudformation create-stack --stack-name ECS-TG-BG-Stack --template-body fil
 ~~aws cloudformation validate-template --template-body file://cfn-tg.yaml~~
 ~~aws cloudformation create-stack --stack-name ECS-TG-Stack --template-body file://cfn-tg.yaml~~
 
-## パラメータストア環境構築
-### 1. Systems Manager Parameter Storeの作成
+## 12. パラメータストア環境構築
+### 12.1. Systems Manager Parameter Storeの作成
 ```sh
 aws cloudformation validate-template --template-body file://cfn-ssm-param.yaml
 aws cloudformation create-stack --stack-name ECS-SSM-PARAM-Stack --template-body file://cfn-ssm-param.yaml
@@ -408,30 +417,30 @@ aws cloudformation create-stack --stack-name ECS-SSM-PARAM-Stack --template-body
     * 「--parameters ParameterKey=AppDataS3BucketName,ParameterValue=(バケット名)」
 
 
-## コンテナ環境構築
-### 1. ECSクラスタの作成
+## 13. コンテナ環境構築
+### 13.1. ECSクラスタの作成
 ```sh
 aws cloudformation validate-template --template-body file://cfn-ecs-cluster.yaml
 aws cloudformation create-stack --stack-name ECS-CLUSTER-Stack --template-body file://cfn-ecs-cluster.yaml
 ```
 
-### 2. ECSタスク定義の作成
-#### 2-1. ログ転送先がCloud Watch Logs（awslogsドライバ）の場合
+### 13.2. ECSタスク定義の作成
+#### 13.2.1. 2-1. ログ転送先がCloud Watch Logs（awslogsドライバ）の場合
 * awslogsドライバのタスク定義を作成
 ```sh
 aws cloudformation validate-template --template-body file://cfn-ecs-task.yaml
 aws cloudformation create-stack --stack-name ECS-TASK-Stack --template-body file://cfn-ecs-task.yaml
 ```
 
-#### 2-2. カスタムログルーティング（FireLens + Fluent Bit）の場合
+#### 13.2.2. 2-2. カスタムログルーティング（FireLens + Fluent Bit）の場合
 * awsfirelensドライバのタスク定義を作成
 ```sh
 aws cloudformation validate-template --template-body file://cfn-ecs-task-firelens.yaml
 aws cloudformation create-stack --stack-name ECS-TASK-Stack --template-body file://cfn-ecs-task-firelens.yaml
 ```
 
-### 3. ECSサービスの実行
-#### 3-1. ローリングアップデートの場合
+### 13.3. ECSサービスの実行
+#### 13.3.1. 3-1. ローリングアップデートの場合
 * ローリングアップデートの場合は以下を実行
 ```sh
 aws cloudformation validate-template --template-body file://cfn-ecs-service.yaml
@@ -440,7 +449,7 @@ aws cloudformation create-stack --stack-name ECS-SERVICE-Stack --template-body f
 * パラメータMinimumHealthyPercentを0%にしてローリングアップデートの時間を短縮する工夫をしている
 * 実機確認し設定しているが、AP起動が遅くヘルスチェックに失敗する場合には、パラメータ「HealthCheckGracePeriodSeconds」の値を長くしてヘルスチェックの猶予時間を調整するとよい。
 
-#### 3-2. BlueGreenデプロイメントの場合
+#### 13.3.2. 3-2. BlueGreenデプロイメントの場合
 * BlueGreenデプロイメントの場合は以下のパラメータを指定して起動
     * バッチAPについては、ローリングアップデート
 
@@ -451,7 +460,7 @@ aws cloudformation create-stack --stack-name ECS-SERVICE-Stack --template-body f
 
 * 実機確認し設定しているが、AP起動が遅くヘルスチェックに失敗する場合には、パラメータ「HealthCheckGracePeriodSeconds」の値を長くしてヘルスチェックの猶予時間を調整するとよい。
 
-### 4. スケジュール起動でのバッチ処理ECS Taskの起動
+### 13.4. スケジュール起動でのバッチ処理ECS Taskの起動
 * スタックが作成されると、EventBridge Schedulerにより1分ごとにスケジュールバッチ起動用アプリケーションのコンテナが起動する
     * サンプルAPの仕様上、スケジュール経過後次々に実行されバッチ起動するごとに登録データが増えていくので、動作確認できたらスタック削除するとよい。
 ```sh
@@ -459,9 +468,9 @@ aws cloudformation validate-template --template-body file://cfn-ecs-scheduleeven
 aws cloudformation create-stack --stack-name ECS-SCHEDULE-EVENT-Stack --template-body file://cfn-ecs-scheduleevent.yaml
 ```
 
-### 5. ジョブフローでのバッチ処理の起動
-#### 5.1 AWS Batchのジョブ定義等の作成
-##### 5.1-1 ログ転送先がCloud Watch Logs（awslogsドライバ）の場合
+### 13.5. ジョブフローでのバッチ処理の起動
+#### 13.5.1. 5.1 AWS Batchのジョブ定義等の作成
+##### 13.5.1.1. 5.1-1 ログ転送先がCloud Watch Logs（awslogsドライバ）の場合
 * awslogsドライバでのジョブ定義を作成
 
 ```sh
@@ -469,14 +478,14 @@ aws cloudformation validate-template --template-body file://cfn-awsbatch.yaml
 aws cloudformation create-stack --stack-name AWS-BATCH-Stack --template-body file://cfn-awsbatch.yaml
 ```
 
-##### 5.1-2 カスタムログルーティング（FireLens + Fluent Bit）の場合
+##### 13.5.1.2. 5.1-2 カスタムログルーティング（FireLens + Fluent Bit）の場合
 * TBD: 今後作成予定
 
 ```sh
 TBD
 ```
   
-#### 5.2 StepFunctionsのステートマシンの作成
+#### 13.5.2. 5.2 StepFunctionsのステートマシンの作成
 
 > [!NOTE]
 > 現在のMapの実装例は、Mapのインプットとなるデータセットを前方のジョブの実行結果として`Output`に保存し、Mapで`Items`を利用して、`$states.input.*`から受け渡すため、Step Functionsのメモリ上で扱っているが、[AWSの開発者ガイド](https://docs.aws.amazon.com/ja_jp/step-functions/latest/dg/state-map-distributed.html)にも記載があるように、データセットのサイズが256KiBを超えている」、「ワークフローの実行イベント履歴が25,000 エントリを超えている」、「40回を超える並行イテレーションの同時実行が必要」といった場合には、S3に、JSONまたはCSVデータセットを置き、`ItemReader`を利用してMapのインプットとしてS3のパスを指定する方法がある。  
@@ -513,7 +522,7 @@ TBD
         * 動作させるためには、状態の入力として`executionId`を指定する必要がある。適当な文字列を指定すればよい。
         * 例）`{"executionId":"1"}`
 
-### 5.3. EventBridge Schedulerによるステートマシンのスケジュール起動
+### 13.6. EventBridge Schedulerによるステートマシンのスケジュール起動
 * サンプルAPの仕様上、スケジュール経過後次々に実行されるので、動作確認できたらスタック削除するとよい。
 ```sh
 aws cloudformation validate-template --template-body file://cfn-sfn-scheduleevent.yaml
@@ -521,7 +530,7 @@ aws cloudformation create-stack --stack-name SFN-SCHEDULE-Stack --template-body 
 ```
  
 
-### 6. APの実行確認
+### 13.7. APの実行確認
 * Backendアプリケーションの確認  
     * VPCのパブリックサブネット上にBationのEC2を起動
     
@@ -611,7 +620,7 @@ psql -h (Auroraのクラスタエンドポイント) -U postgres -d testdb
 > select * from todo;  
 ```
 
-### 7. Application AutoScalingの設定
+### 13.8. Application AutoScalingの設定
 * 以下のコマンドで、ターゲット追跡スケーリングポリシーでオートスケーリング設定
 ```sh
 aws cloudformation validate-template --template-body file://cfn-ecs-autoscaling.yaml
@@ -635,9 +644,9 @@ aws cloudformation create-stack --stack-name ECS-AutoScaling-Stack --template-bo
 * 対象のECSサービスがスケールアウトされ、1タスク追加され2タスクになっていることを確認
 * abコマンドが終了し、しばらくたつと、対象のECSサービスがスケールインされ、1タスクに戻っていることを確認
 
-## CD環境構築（ローリングアップデートの場合）
+## 14. CD環境構築（ローリングアップデートの場合）
 * ローリングアップデートの場合は、以下のコマンドを実行
-### 1. ローリングアップデート対応のCodePipelineの作成
+### 14.1. ローリングアップデート対応のCodePipelineの作成
 * BFFアプリケーション
 ```sh
 aws cloudformation validate-template --template-body file://cfn-codepipeline-bff.yaml
@@ -666,16 +675,16 @@ aws cloudformation create-stack --stack-name Batch-CodePipeline-Stack --template
 
 * Artifact用のS3バケット名を変えるには、それぞれのcfnスタック作成時のコマンドでパラメータを指定する
     * 「--parameters ParameterKey=ArtifactS3BucketName,ParameterValue=(バケット名)」
-### 2. CodePipelineの確認
+### 14.2. CodePipelineの確認
 * CodePipelineの作成後、パイプラインが自動実行されるので、デプロイ成功することを確認する
 
-### 3. ソースコードの変更
+### 14.3. ソースコードの変更
 * 何らかのソースコードの変更を加えて、CodeCommitにプッシュする
 * CodePipelineのパイプラインが実行され、新しいAPがデプロイされることを確認する
 
-## CD環境構築（BlueGreenデプロイメントの場合）
+## 15. CD環境構築（BlueGreenデプロイメントの場合）
 * BlueGreenデプロイメントの場合は、以下のコマンドを実行
-### 1. CodeDeployの作成
+### 15.1. CodeDeployの作成
 * BFFアプリケーション
 ```sh
 aws cloudformation validate-template --template-body file://cfn-bff-codedeploy.yaml
@@ -692,7 +701,7 @@ aws cloudformation create-stack --stack-name Backend-CodeDeploy-Stack --template
     * 「--parameters ParameterKey=ArtifactS3BucketName,ParameterValue=(バケット名)」  
 * 現状、テンプレート内の「DeploymentConfigName」が線形リリース（「CodeDeployDefault.ECSLinear10PercentEvery1Minutes」）になっているが、一度に切り替えたい場合は、通常のBlueGreenデプロイメント（CodeDeployDefault.ECSAllAtOnce）に変えるとよい。    
 
-### 2. BlueGreenデプロイメント対応のCodePipelineの作成
+### 15.2. BlueGreenデプロイメント対応のCodePipelineの作成
 
 * BFFアプリケーション
 ```sh
@@ -723,13 +732,13 @@ aws cloudformation create-stack --stack-name Batch-CodePipeline-Stack --template
 
 * Artifact用のS3バケット名を変えるには、それぞれのcfnスタック作成時のコマンドでパラメータを指定する
     * 「--parameters ParameterKey=ArtifactS3BucketName,ParameterValue=(バケット名)」
-### 3. CodePipelineの確認
+### 15.3. CodePipelineの確認
 * CodePipelineの作成後、パイプラインが自動実行されるので、デプロイ成功することを確認する
-### 4. ソースコードの変更
+### 15.4. ソースコードの変更
 * 何らかのソースコードの変更を加えて、CodeCommitにプッシュする
 * CodePipelineのパイプラインが実行され、新しいAPがデプロイされることを確認する
 
-## AWSリソースの削除
+## 16. AWSリソースの削除
 
 ```sh
 aws cloudformation delete-stack --stack-name Batch-CodePipeline-Stack
@@ -775,7 +784,7 @@ aws cloudformation delete-stack --stack-name ECR-Stack
 
 ```
 
-## （参考）CloudFormationコマンド文法メモ
+## 17. （参考）CloudFormationコマンド文法メモ
 * スタックの新規作成
 ```sh
 aws cloudformation create-stack --stack-name myteststack --template-body file://cfn-ec2.yaml
