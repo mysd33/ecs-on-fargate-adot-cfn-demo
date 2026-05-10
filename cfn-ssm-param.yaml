@@ -234,3 +234,10 @@ Resources:
       Type: String
       Value:
         Fn::ImportValue: !Sub ${StackPrefix}-SQSQueueName
+  #sample-batch-jobflow
+  SampleBatchJobflowJob921MapSizeParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /config/${ProjectName}/${EnvName}/sample-batch-jobflow/example.job921.map_size
+      Type: String
+      Value: "3"
