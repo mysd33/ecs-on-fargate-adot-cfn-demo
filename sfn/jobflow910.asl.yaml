@@ -19,13 +19,22 @@ States:
                         Command:
                           - --spring.batch.job.name=job911
                           - inputData=input911
-                          - "{% 'executionId=' & $states.context.Execution.Input.executionId %}"
+                          - "{% 'executionId=' &
+                            $states.context.Execution.Input.executionId %}"
                         Environment:
                           - Name: TASK_TOKEN
                             Value: "{% $states.context.Task.Token %}"
             End: true
             Output:
               jobResult: "{% $states.result %}"
+            Retry:
+              - ErrorEquals:
+                  - Batch.ServerException
+                  - Batch.AWSBatchException
+                BackoffRate: 2
+                IntervalSeconds: 10
+                MaxAttempts: 3
+                JitterStrategy: FULL
       - StartAt: Job912
         States:
           Job912:
@@ -42,16 +51,25 @@ States:
                         Command:
                           - --spring.batch.job.name=job912
                           - inputData=input912
-                          - "{% 'executionId=' & $states.context.Execution.Input.executionId %}"
+                          - "{% 'executionId=' &
+                            $states.context.Execution.Input.executionId %}"
                         Environment:
                           - Name: TASK_TOKEN
                             Value: "{% $states.context.Task.Token %}"
             End: true
             Output:
               jobResult: "{% $states.result %}"
+            Retry:
+              - ErrorEquals:
+                  - Batch.ServerException
+                  - Batch.AWSBatchException
+                BackoffRate: 2
+                IntervalSeconds: 10
+                MaxAttempts: 3
+                JitterStrategy: FULL
     Next: Job913
     Output:
-      jobResultList: "{% $states.result %}"
+      jobResultList: "{% $states.result.jobResult %}"
   Job913:
     Type: Task
     Resource: arn:aws:states:::batch:submitJob.sync
@@ -66,12 +84,21 @@ States:
                 Command:
                   - --spring.batch.job.name=job913
                   - "{% 'inputData=' & $string($states.input.jobResultList) %}"
-                  - "{% 'executionId=' & $states.context.Execution.Input.executionId %}"
+                  - "{% 'executionId=' &
+                    $states.context.Execution.Input.executionId %}"
                 Environment:
                   - Name: TASK_TOKEN
                     Value: "{% $states.context.Task.Token %}"
     End: true
     Output:
       jobResult: "{% $states.result %}"
+    Retry:
+      - ErrorEquals:
+          - Batch.ServerException
+          - Batch.AWSBatchException
+        BackoffRate: 2
+        IntervalSeconds: 10
+        MaxAttempts: 3
+        JitterStrategy: FULL
 QueryLanguage: JSONata
 Comment: Parallel Jobflow Sample

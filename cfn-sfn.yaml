@@ -16,10 +16,6 @@ Parameters:
     Description: S3 Prefix for Step Functions State Machine Definition
     Type: String
     Default: sfn
-  MapJobsMaxConcurrency:
-    Description: Max Concurrency for Map State in Job920Flow
-    Type: Number
-    Default: 50
 
 #Mappings: 
 
@@ -91,7 +87,6 @@ Resources:
         job_queue_arn:
           Fn::ImportValue:
             Fn::Sub: ${StackPrefix}-JobQueue-Arn
-        map_jobs_max_concurrency: !Ref MapJobsMaxConcurrency
 
 Outputs:
   Job900FlowArn:

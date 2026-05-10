@@ -14,13 +14,22 @@ States:
                 Command:
                   - --spring.batch.job.name=job901
                   - inputData=input901
-                  - "{% 'executionId=' & $states.context.Execution.Input.executionId %}"
+                  - "{% 'executionId=' &
+                    $states.context.Execution.Input.executionId %}"
                 Environment:
                   - Name: TASK_TOKEN
                     Value: "{% $states.context.Task.Token %}"
     Next: Job902
     Output:
       job901Result: "{% $states.result %}"
+    Retry:
+      - ErrorEquals:
+          - Batch.ServerException
+          - Batch.AWSBatchException
+        BackoffRate: 2
+        IntervalSeconds: 10
+        MaxAttempts: 3
+        JitterStrategy: FULL
   Job902:
     Type: Task
     Resource: arn:aws:states:::batch:submitJob.sync
@@ -29,16 +38,25 @@ States:
       JobDefinition: ${job902_job_definition_arn}
       JobQueue: ${job_queue_arn}
       EcsPropertiesOverride:
-        TaskProperties:      
+        TaskProperties:
           - Containers:
               - Name: batch-jobflow
                 Command:
                   - --spring.batch.job.name=job902
                   - "{% 'inputData=' & $states.input.job901Result %}"
-                  - "{% 'executionId=' & $states.context.Execution.Input.executionId %}"
+                  - "{% 'executionId=' &
+                    $states.context.Execution.Input.executionId %}"
                 Environment:
                   - Name: TASK_TOKEN
                     Value: "{% $states.context.Task.Token %}"
     End: true
+    Retry:
+      - ErrorEquals:
+          - Batch.ServerException
+          - Batch.AWSBatchException
+        BackoffRate: 2
+        IntervalSeconds: 10
+        MaxAttempts: 3
+        JitterStrategy: FULL
 QueryLanguage: JSONata
 Comment: Simple Jobflow Sample

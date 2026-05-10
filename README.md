@@ -52,12 +52,6 @@
 
                 * TBD: 今後作成予定
 
-> [!WARNING]
->   現在、ParallelやMapを使った複雑なフロー制御を実装し動作確認中
-
-> [!NOTE]
-> 現在のMapの実装例は、Mapのインプットとなるデータセットを前方のジョブの実行結果として`Output`に保存し、Mapで`Items`を利用して、`$states.input.*`から受け渡すため、Step Functionsのメモリ上で扱っているが、[AWSの開発者ガイド](https://docs.aws.amazon.com/ja_jp/step-functions/latest/dg/state-map-distributed.html)にも記載があるように、データセットのサイズが256KiBを超えている」、「ワークフローの実行イベント履歴が25,000 エントリを超えている」、「40回を超える並行イテレーションの同時実行が必要」といった場合には、S3に、JSONまたはCSVデータセットを置き、`ItemReader`を利用してMapのインプットとしてS3のパスを指定する方法がある。  
-> 
 
 * CI/CD
     * CodePipeline、CodeBuild、CodeDeployを使った、CI/CDに対応。
@@ -484,8 +478,9 @@ TBD
   
 #### 5.2 StepFunctionsのステートマシンの作成
 
-> [!WARNING]
->   現在、ParallelやMapを使った複雑なフロー制御を実装し動作確認中
+> [!NOTE]
+> 現在のMapの実装例は、Mapのインプットとなるデータセットを前方のジョブの実行結果として`Output`に保存し、Mapで`Items`を利用して、`$states.input.*`から受け渡すため、Step Functionsのメモリ上で扱っているが、[AWSの開発者ガイド](https://docs.aws.amazon.com/ja_jp/step-functions/latest/dg/state-map-distributed.html)にも記載があるように、データセットのサイズが256KiBを超えている」、「ワークフローの実行イベント履歴が25,000 エントリを超えている」、「40回を超える並行イテレーションの同時実行が必要」といった場合には、S3に、JSONまたはCSVデータセットを置き、`ItemReader`を利用してMapのインプットとしてS3のパスを指定する方法がある。  
+> また、AWS BatchへのSubmitJobの最大秒間トランザクション数 (TPS)：50は、ハードリミットによるクォータであるため、同時実行数が多い場合には、Mapの`MaxConcurrency`を50以下に設定したり、Retryの設定をしたり、`WAIT`で同時実行タイミングをずらしたり、ItemBatcherやAWS Batchの配列ジョブを使って複数のアイテムをまとめて処理する、AP側で多重実行（例：Spring BatchのPartitioning Step）に対応する等、処理時間の要件を遵守しつつスロットリングを回避できるようないずれかの工夫が必要になる場合がある。
 
 * CloudFormation内で参照するStep Functionsのステートマシン定義ファイル（asl.yaml）を、S3にアップロードしあらかじめ格納しておく
     * `(バケット名)/sfn`配下に配置することとする
@@ -494,6 +489,9 @@ TBD
     ```sh
     #sfnフォルダ配下のファイルをすべてアップロードする場合
     aws s3 cp sfn/ s3://(バケット名)/sfn/ --recursive
+
+    #例
+    # aws s3 cp sfn/ s3://mysd33bucket123/sfn/ --recursive
     ```
 
 * CloudFormationでステートマシンを作成
@@ -512,8 +510,8 @@ TBD
 
 * ステートマシンの手動起動
     * この時点でマネージドコンソールからのステートマシンが可能なので、正常に動作することを確認しておくとよい
-        * 動作させるためには、状態の入力として`ExecutionId`を指定する必要がある。適当な文字列を指定すればよい。
-        * 例）`{"ExecutionId":"1"}`
+        * 動作させるためには、状態の入力として`executionId`を指定する必要がある。適当な文字列を指定すればよい。
+        * 例）`{"executionId":"1"}`
 
 ### 5.3. EventBridge Schedulerによるステートマシンのスケジュール起動
 * サンプルAPの仕様上、スケジュール経過後次々に実行されるので、動作確認できたらスタック削除するとよい。

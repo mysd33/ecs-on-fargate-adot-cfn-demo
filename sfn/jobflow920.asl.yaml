@@ -14,18 +14,27 @@ States:
                 Command:
                   - --spring.batch.job.name=job921
                   - inputData=input921
-                  - "{% 'executionId=' & $states.context.Execution.Input.executionId %}"
+                  - "{% 'executionId=' &
+                    $states.context.Execution.Input.executionId %}"
                 Environment:
                   - Name: TASK_TOKEN
                     Value: "{% $states.context.Task.Token %}"
     Next: MapJobs
     Output:
       TargetDataItems: "{% $states.result %}"
+    Retry:
+      - ErrorEquals:
+          - Batch.ServerException
+          - Batch.AWSBatchException
+        BackoffRate: 2
+        IntervalSeconds: 10
+        MaxAttempts: 3
+        JitterStrategy: FULL
   MapJobs:
     Type: Map
     Label: MapJobs
     Items: "{% $states.input.TargetDataItems %}"
-    MaxConcurrency: ${map_jobs_max_concurrency}
+    MaxConcurrency: 50
     ItemProcessor:
       ProcessorConfig:
         Mode: DISTRIBUTED
@@ -54,6 +63,14 @@ States:
           End: true
           Output:
             jobResult: "{% $states.result %}"
+          Retry:
+            - ErrorEquals:
+                - Batch.ServerException
+                - Batch.AWSBatchException
+              BackoffRate: 2
+              IntervalSeconds: 10
+              MaxAttempts: 3
+              JitterStrategy: FULL
     Next: Job923
     Output:
       jobResultList: "{% $states.result %}"
@@ -71,12 +88,21 @@ States:
                 Command:
                   - --spring.batch.job.name=job923
                   - "{% 'inputData=' & $string($states.input.jobResultList) %}"
-                  - "{% 'executionId=' & $states.context.Execution.Input.executionId %}"                  
+                  - "{% 'executionId=' &
+                    $states.context.Execution.Input.executionId %}"
                 Environment:
                   - Name: TASK_TOKEN
                     Value: "{% $states.context.Task.Token %}"
     End: true
     Output:
       jobResult: "{% $states.result %}"
+    Retry:
+      - ErrorEquals:
+          - Batch.ServerException
+          - Batch.AWSBatchException
+        BackoffRate: 2
+        IntervalSeconds: 10
+        MaxAttempts: 3
+        JitterStrategy: FULL
 QueryLanguage: JSONata
 Comment: Map Jobflow Sample
