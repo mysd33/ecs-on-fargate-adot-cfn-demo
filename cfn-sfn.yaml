@@ -42,9 +42,37 @@ Resources:
           Fn::ImportValue:
             Fn::Sub: ${StackPrefix}-JobQueue-Arn
 
+  Job910Flow:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineName: !Sub ${StackPrefix}-Job910Flow
+      RoleArn:
+        Fn::ImportValue: !Sub ${StackPrefix}-StepFunctionsExecutionRole-Arn
+      DefinitionS3Location:
+        Bucket: !Ref StateMachineDefinitionS3BucketName
+        Key: !Sub "${StateMachineDefinitionS3Prefix}/jobflow910.asl.yaml"
+      DefinitionSubstitutions:
+        job911_job_definition_arn:
+          Fn::ImportValue:
+            Fn::Sub: ${StackPrefix}-BatchJobDefinition-Arn
+        job912_job_definition_arn:
+          Fn::ImportValue:
+            Fn::Sub: ${StackPrefix}-BatchJobDefinition-Arn
+        job913_job_definition_arn:
+          Fn::ImportValue:
+            Fn::Sub: ${StackPrefix}-BatchJobDefinition-Arn
+        job_queue_arn:
+          Fn::ImportValue:
+            Fn::Sub: ${StackPrefix}-JobQueue-Arn
+
 Outputs:
   Job900FlowArn:
     Description: Step Functions State Machine Arn
     Value: !Ref Job900Flow
     Export:
       Name: !Sub ${StackPrefix}-Job900Flow-Arn
+  Job910FlowArn:
+    Description: Step Functions State Machine Arn
+    Value: !Ref Job910Flow
+    Export:
+      Name: !Sub ${StackPrefix}-Job910Flow-Arn

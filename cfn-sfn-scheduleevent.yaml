@@ -34,4 +34,21 @@ Resources:
           {
             "ExecutionId": "<aws.scheduler.execution-id>"
           }
+  #Jobflow910
+  Jobflow910Schedule:
+    Type: AWS::Scheduler::Schedule
+    Properties:
+      ScheduleExpression: !Ref ScheduleExpression
+      FlexibleTimeWindow:
+        Mode: FLEXIBLE
+        MaximumWindowInMinutes: 1
+      Target:
+        Arn:
+          Fn::ImportValue: !Sub ${StackPrefix}-Job910Flow-Arn
+        RoleArn:
+          Fn::ImportValue: !Sub ${StackPrefix}-SfnEventRole-Arn
+        Input:  |
+          {
+            "ExecutionId": "<aws.scheduler.execution-id>"
+          }
 #Outputs:

@@ -1,6 +1,6 @@
-StartAt: job901
+StartAt: Job901
 States:
-  job901:
+  Job901:
     Type: Task
     Resource: arn:aws:states:::batch:submitJob.sync
     Arguments:
@@ -18,11 +18,11 @@ States:
                 Environment:
                   - Name: TASK_TOKEN
                     Value: "{% $states.context.Task.Token %}"
-    Next: job902
+    Next: Job902
     Output:
       Job901Result: "{% $states.result %}"
       ExecutionId: "{% $states.input.ExecutionId %}"
-  job902:
+  Job902:
     Type: Task
     Resource: arn:aws:states:::batch:submitJob.sync
     Arguments:
