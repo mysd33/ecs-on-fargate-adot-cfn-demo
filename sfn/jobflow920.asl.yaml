@@ -24,12 +24,12 @@ States:
   MapJobs:
     Type: Map
     Label: MapJobs
-    ProcessorConfig:
-      Mode: DISTRIBUTED
-      ExecutionType: STANDARD
     Items: "{% $states.input.TargetDataItems %}"
     MaxConcurrency: ${map_jobs_max_concurrency}
     ItemProcessor:
+      ProcessorConfig:
+        Mode: DISTRIBUTED
+        ExecutionType: STANDARD
       StartAt: Job922
       States:
         Job922:
