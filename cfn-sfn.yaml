@@ -16,6 +16,10 @@ Parameters:
     Description: S3 Prefix for Step Functions State Machine Definition
     Type: String
     Default: sfn
+  MapJobsMaxConcurrency:
+    Description: Max Concurrency for Map State in Job920Flow
+    Type: Number
+    Default: 50
 
 #Mappings: 
 
@@ -65,6 +69,30 @@ Resources:
           Fn::ImportValue:
             Fn::Sub: ${StackPrefix}-JobQueue-Arn
 
+  Job920Flow:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineName: !Sub ${StackPrefix}-Job920Flow
+      RoleArn:
+        Fn::ImportValue: !Sub ${StackPrefix}-StepFunctionsExecutionRole-Arn
+      DefinitionS3Location:
+        Bucket: !Ref StateMachineDefinitionS3BucketName
+        Key: !Sub "${StateMachineDefinitionS3Prefix}/jobflow920.asl.yaml"
+      DefinitionSubstitutions:
+        job921_job_definition_arn:
+          Fn::ImportValue:
+            Fn::Sub: ${StackPrefix}-BatchJobDefinition-Arn
+        job922_job_definition_arn:
+          Fn::ImportValue:
+            Fn::Sub: ${StackPrefix}-BatchJobDefinition-Arn
+        job923_job_definition_arn:
+          Fn::ImportValue:
+            Fn::Sub: ${StackPrefix}-BatchJobDefinition-Arn
+        job_queue_arn:
+          Fn::ImportValue:
+            Fn::Sub: ${StackPrefix}-JobQueue-Arn
+        map_jobs_max_concurrency: !Ref MapJobsMaxConcurrency
+
 Outputs:
   Job900FlowArn:
     Description: Step Functions State Machine Arn
@@ -76,3 +104,8 @@ Outputs:
     Value: !Ref Job910Flow
     Export:
       Name: !Sub ${StackPrefix}-Job910Flow-Arn
+  Job920FlowArn:
+    Description: Step Functions State Machine Arn
+    Value: !Ref Job920Flow
+    Export:
+      Name: !Sub ${StackPrefix}-Job920Flow-Arn

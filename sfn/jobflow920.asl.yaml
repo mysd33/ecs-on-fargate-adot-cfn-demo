@@ -1,0 +1,85 @@
+StartAt: Job921
+States:
+  Job921:
+    Type: Task
+    Resource: arn:aws:states:::batch:submitJob.sync
+    Arguments:
+      JobName: job921
+      JobDefinition: ${job921_job_definition_arn}
+      JobQueue: ${job_queue_arn}
+      EcsPropertiesOverride:
+        TaskProperties:
+          - Containers:
+              - Name: batch-jobflow
+                Command:
+                  - --spring.batch.job.name=job921
+                  - inputData=input921
+                  - "{% 'executionId=' & $states.input.ExecutionId %}"
+                Environment:
+                  - Name: TASK_TOKEN
+                    Value: "{% $states.context.Task.Token %}"
+    Next: MapJobs
+    Output:
+      TargetDataItems: "{% $states.result %}"
+      ExecutionId: "{% $states.input.ExecutionId %}"
+  MapJobs:
+    Type: Map
+    Label: MapJobs
+    ProcessorConfig:
+      Mode: DISTRIBUTED
+      ExecutionType: STANDARD
+    Items: "{% $states.input.TargetDataItems %}"
+    MaxConcurrency: ${map_jobs_max_concurrency}
+    ItemProcessor:
+      StartAt: Job922
+      States:
+        Job922:
+          Type: Task
+          Resource: arn:aws:states:::batch:submitJob.sync
+          Arguments:
+            JobName: job922
+            JobDefinition: ${job922_job_definition_arn}
+            JobQueue: ${job_queue_arn}
+            EcsPropertiesOverride:
+              TaskProperties:
+                - Containers:
+                    - Name: batch-jobflow
+                      Command:
+                        - --spring.batch.job.name=job922
+                        - "{% 'inputData=' & $string($states.input) %}"
+                        - "{% 'executionId=' &
+                          $states.context.Execution.Input.ExecutionId %}"
+                      Environment:
+                        - Name: TASK_TOKEN
+                          Value: "{% $states.context.Task.Token %}"
+          End: true
+          Output:
+            JobResult: "{% $states.result %}"
+    Next: Job923
+    Output:
+      JobResultList: "{% $states.result %}"
+      ExecutionId: "{% $states.input.ExecutionId %}"
+  Job923:
+    Type: Task
+    Resource: arn:aws:states:::batch:submitJob.sync
+    Arguments:
+      JobName: job923
+      JobDefinition: ${job923_job_definition_arn}
+      JobQueue: ${job_queue_arn}
+      EcsPropertiesOverride:
+        TaskProperties:
+          - Containers:
+              - Name: batch-jobflow
+                Command:
+                  - --spring.batch.job.name=job923
+                  - "{% 'inputData=' & $string($states.input.JobResultList) %}"
+                  - "{% 'executionId=' & $states.input.ExecutionId %}"
+                Environment:
+                  - Name: TASK_TOKEN
+                    Value: "{% $states.context.Task.Token %}"
+    End: true
+    Output:
+      JobResult: "{% $states.result %}"
+      ExecutionId: "{% $states.input.ExecutionId %}"
+QueryLanguage: JSONata
+Comment: Map Jobflow Sample

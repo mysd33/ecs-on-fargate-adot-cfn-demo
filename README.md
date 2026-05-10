@@ -52,8 +52,12 @@
 
                 * TBD: 今後作成予定
 
-        > [!WARNING]
-        >   今後、ParallelやMapを使った複雑なフロー制御も実装予定             
+> [!WARNING]
+>   現在、ParallelやMapを使った複雑なフロー制御を実装し動作確認中
+
+> [!NOTE]
+> 現在のMapの実装例は、Mapのインプットとなるデータセットを前方のジョブの実行結果として`Output`に保存し、Mapで`Items`を利用して、`$states.input.*`から受け渡すため、Step Functionsのメモリ上で扱っているが、[AWSの開発者ガイド](https://docs.aws.amazon.com/ja_jp/step-functions/latest/dg/state-map-distributed.html)にも記載があるように、データセットのサイズが256KiBを超えている」、「ワークフローの実行イベント履歴が25,000 エントリを超えている」、「40回を超える並行イテレーションの同時実行が必要」といった場合には、S3に、JSONまたはCSVデータセットを置き、`ItemReader`を利用してMapのインプットとしてS3のパスを指定する方法がある。  
+> 
 
 * CI/CD
     * CodePipeline、CodeBuild、CodeDeployを使った、CI/CDに対応。
@@ -479,6 +483,10 @@ TBD
 ```
   
 #### 5.2 StepFunctionsのステートマシンの作成
+
+> [!WARNING]
+>   現在、ParallelやMapを使った複雑なフロー制御を実装し動作確認中
+
 * CloudFormation内で参照するStep Functionsのステートマシン定義ファイル（asl.yaml）を、S3にアップロードしあらかじめ格納しておく
     * `(バケット名)/sfn`配下に配置することとする
     * 最後のあとかたづけの際には、バケット内のファイルを削除する必要がある
