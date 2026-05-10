@@ -14,14 +14,13 @@ States:
                 Command:
                   - --spring.batch.job.name=job921
                   - inputData=input921
-                  - "{% 'executionId=' & $states.input.ExecutionId %}"
+                  - "{% 'executionId=' & $states.context.Execution.Input.executionId %}"
                 Environment:
                   - Name: TASK_TOKEN
                     Value: "{% $states.context.Task.Token %}"
     Next: MapJobs
     Output:
       TargetDataItems: "{% $states.result %}"
-      ExecutionId: "{% $states.input.ExecutionId %}"
   MapJobs:
     Type: Map
     Label: MapJobs
@@ -48,17 +47,16 @@ States:
                         - --spring.batch.job.name=job922
                         - "{% 'inputData=' & $string($states.input) %}"
                         - "{% 'executionId=' &
-                          $states.context.Execution.Input.ExecutionId %}"
+                          $states.context.Execution.Input.executionId %}"
                       Environment:
                         - Name: TASK_TOKEN
                           Value: "{% $states.context.Task.Token %}"
           End: true
           Output:
-            JobResult: "{% $states.result %}"
+            jobResult: "{% $states.result %}"
     Next: Job923
     Output:
-      JobResultList: "{% $states.result %}"
-      ExecutionId: "{% $states.input.ExecutionId %}"
+      jobResultList: "{% $states.result %}"
   Job923:
     Type: Task
     Resource: arn:aws:states:::batch:submitJob.sync
@@ -72,14 +70,13 @@ States:
               - Name: batch-jobflow
                 Command:
                   - --spring.batch.job.name=job923
-                  - "{% 'inputData=' & $string($states.input.JobResultList) %}"
-                  - "{% 'executionId=' & $states.input.ExecutionId %}"
+                  - "{% 'inputData=' & $string($states.input.jobResultList) %}"
+                  - "{% 'executionId=' & $states.context.Execution.Input.executionId %}"                  
                 Environment:
                   - Name: TASK_TOKEN
                     Value: "{% $states.context.Task.Token %}"
     End: true
     Output:
-      JobResult: "{% $states.result %}"
-      ExecutionId: "{% $states.input.ExecutionId %}"
+      jobResult: "{% $states.result %}"
 QueryLanguage: JSONata
 Comment: Map Jobflow Sample

@@ -14,14 +14,13 @@ States:
                 Command:
                   - --spring.batch.job.name=job901
                   - inputData=input901
-                  - "{% 'executionId=' & $states.input.ExecutionId %}"
+                  - "{% 'executionId=' & $states.context.Execution.Input.executionId %}"
                 Environment:
                   - Name: TASK_TOKEN
                     Value: "{% $states.context.Task.Token %}"
     Next: Job902
     Output:
-      Job901Result: "{% $states.result %}"
-      ExecutionId: "{% $states.input.ExecutionId %}"
+      job901Result: "{% $states.result %}"
   Job902:
     Type: Task
     Resource: arn:aws:states:::batch:submitJob.sync
@@ -35,11 +34,11 @@ States:
               - Name: batch-jobflow
                 Command:
                   - --spring.batch.job.name=job902
-                  - "{% 'inputData=' & $states.input.Job901Result %}"
-                  - "{% 'executionId=' & $states.input.ExecutionId %}"
+                  - "{% 'inputData=' & $states.input.job901Result %}"
+                  - "{% 'executionId=' & $states.context.Execution.Input.executionId %}"
                 Environment:
                   - Name: TASK_TOKEN
-                    Value: "{% $states.context.Task.Token %}"        
+                    Value: "{% $states.context.Task.Token %}"
     End: true
 QueryLanguage: JSONata
 Comment: Simple Jobflow Sample
