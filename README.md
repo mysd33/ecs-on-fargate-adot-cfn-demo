@@ -38,6 +38,10 @@
 
 
 ### 1.3. StepFunctionsによるジョブフロー実行制御
+* 本サンプルでは、StepFunctionsのステートマシンを使った典型的なジョブフローのパターンを用意している。
+    * StepFunctionsから呼ばれるバッチアプリケーションは、AWS Batch上でコマンドライン実行される形で動作するようになっている。
+    * 対応する各ジョブのアプリケーションは [sample-batch-jobflow](https://github.com/mysd33/sample-batch-jobflow)のソースコード確認するとよい。
+
 * [Jobflow900](sfn/jobflow900.asl.yaml)
     * シンプルなジョブの順序実行の例
 
