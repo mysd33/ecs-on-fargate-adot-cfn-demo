@@ -21,7 +21,7 @@ States:
                     Value: "{% $states.context.Task.Token %}"
     Next: MapJobs
     Output:
-      TargetDataItems: "{% $states.result %}"
+      jobResult: "{% $states.result %}"
     Retry:
       - ErrorEquals:
           - Batch.ServerException
@@ -33,7 +33,7 @@ States:
   MapJobs:
     Type: Map
     Label: MapJobs
-    Items: "{% $states.input.TargetDataItems %}"
+    Items: "{% $states.input.jobResult.list %}"
     MaxConcurrency: 50
     ItemProcessor:
       ProcessorConfig:
@@ -73,7 +73,7 @@ States:
               JitterStrategy: FULL
     Next: Job923
     Output:
-      jobResultList: "{% $states.result %}"
+      jobResultList: "{% $states.result.jobResult %}"
   Job923:
     Type: Task
     Resource: arn:aws:states:::batch:submitJob.sync

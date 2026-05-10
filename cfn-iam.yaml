@@ -493,7 +493,25 @@ Resources:
           Resource: !Sub "arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/StepFunctionsGetEventsForBatchJobsRule"
       PolicyName: !Sub ${StackPrefix}-StepFunctionsBatchJobPolicy
       Roles:
-      - !Ref StepFunctionsExecutionRole          
+      - !Ref StepFunctionsExecutionRole
+
+  #IAM Policy for Map State Execution of Step Functions State Machine
+  StepFunctionsMapStatePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+        - Action:
+          - states:StartExecution
+          Effect: Allow
+          Resource: !Sub arn:${AWS::Partition}:states:${AWS::Region}:${AWS::AccountId}:stateMachine:*
+        - Action:
+          - states:DescribeExecution
+          Effect: Allow
+          Resource: !Sub arn:${AWS::Partition}:states:${AWS::Region}:${AWS::AccountId}:execution:*
+      PolicyName: !Sub ${StackPrefix}-StepFunctionsMapStatePolicy
+      Roles:
+      - !Ref StepFunctionsExecutionRole
 
   #IAM Role for EventBridge Scheduler to trigger Step Functions State Machine
   SfnEventRole:
@@ -506,7 +524,7 @@ Resources:
             Effect: Allow
             Principal:
               Service: scheduler.amazonaws.com
-  #IAM Polocy for EventBridge Scheduler to trigger Step Functions State Machine
+  #IAM Policy for EventBridge Scheduler to trigger Step Functions State Machine
   SfnEventPolicy:
     Type: AWS::IAM::Policy
     Properties:
