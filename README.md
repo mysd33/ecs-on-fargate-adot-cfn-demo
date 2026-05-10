@@ -321,7 +321,7 @@ aws cloudformation create-stack --stack-name ECS-SG-Stack --template-body file:/
 aws cloudformation validate-template --template-body file://cfn-vpe.yaml
 aws cloudformation create-stack --stack-name ECS-VPE-Stack --template-body file://cfn-vpe.yaml
 ```
-### 6.4. 4.（作成任意）NAT Gatewayの作成とプライベートサブネットのルートテーブル更新
+### 6.4. （作成任意）NAT Gatewayの作成とプライベートサブネットのルートテーブル更新
 * 本手順では、ECRのイメージ転送量等にかかるNAT Gatewayのコスト節約から、全てVPC Endpointで作成するので、NAT Gatewayは通常不要。
     * とはいえ、全部VPC Endpointにすると、エンドポイント数分、デモ程度で何度も起動したり落としたりで1時間未満でも時間単位課金でコストがかえって結構かかる場合もある。その場合の調整として、本手順のVPC Endpoint作成対象を減らす等カスタマイズして、VPC Endpoint未作成のリソースアクセスに使用するために以下を追加実行すればよい。
 
@@ -425,14 +425,14 @@ aws cloudformation create-stack --stack-name ECS-CLUSTER-Stack --template-body f
 ```
 
 ### 13.2. ECSタスク定義の作成
-#### 13.2.1. 2-1. ログ転送先がCloud Watch Logs（awslogsドライバ）の場合
+#### 13.2.1. ログ転送先がCloud Watch Logs（awslogsドライバ）の場合
 * awslogsドライバのタスク定義を作成
 ```sh
 aws cloudformation validate-template --template-body file://cfn-ecs-task.yaml
 aws cloudformation create-stack --stack-name ECS-TASK-Stack --template-body file://cfn-ecs-task.yaml
 ```
 
-#### 13.2.2. 2-2. カスタムログルーティング（FireLens + Fluent Bit）の場合
+#### 13.2.2. カスタムログルーティング（FireLens + Fluent Bit）の場合
 * awsfirelensドライバのタスク定義を作成
 ```sh
 aws cloudformation validate-template --template-body file://cfn-ecs-task-firelens.yaml
@@ -440,7 +440,7 @@ aws cloudformation create-stack --stack-name ECS-TASK-Stack --template-body file
 ```
 
 ### 13.3. ECSサービスの実行
-#### 13.3.1. 3-1. ローリングアップデートの場合
+#### 13.3.1. ローリングアップデートの場合
 * ローリングアップデートの場合は以下を実行
 ```sh
 aws cloudformation validate-template --template-body file://cfn-ecs-service.yaml
@@ -449,7 +449,7 @@ aws cloudformation create-stack --stack-name ECS-SERVICE-Stack --template-body f
 * パラメータMinimumHealthyPercentを0%にしてローリングアップデートの時間を短縮する工夫をしている
 * 実機確認し設定しているが、AP起動が遅くヘルスチェックに失敗する場合には、パラメータ「HealthCheckGracePeriodSeconds」の値を長くしてヘルスチェックの猶予時間を調整するとよい。
 
-#### 13.3.2. 3-2. BlueGreenデプロイメントの場合
+#### 13.3.2. BlueGreenデプロイメントの場合
 * BlueGreenデプロイメントの場合は以下のパラメータを指定して起動
     * バッチAPについては、ローリングアップデート
 
@@ -469,8 +469,8 @@ aws cloudformation create-stack --stack-name ECS-SCHEDULE-EVENT-Stack --template
 ```
 
 ### 13.5. ジョブフローでのバッチ処理の起動
-#### 13.5.1. 5.1 AWS Batchのジョブ定義等の作成
-##### 13.5.1.1. 5.1-1 ログ転送先がCloud Watch Logs（awslogsドライバ）の場合
+#### 13.5.1. AWS Batchのジョブ定義等の作成
+##### 13.5.1.1. ログ転送先がCloud Watch Logs（awslogsドライバ）の場合
 * awslogsドライバでのジョブ定義を作成
 
 ```sh
@@ -478,14 +478,14 @@ aws cloudformation validate-template --template-body file://cfn-awsbatch.yaml
 aws cloudformation create-stack --stack-name AWS-BATCH-Stack --template-body file://cfn-awsbatch.yaml
 ```
 
-##### 13.5.1.2. 5.1-2 カスタムログルーティング（FireLens + Fluent Bit）の場合
+##### 13.5.1.2. カスタムログルーティング（FireLens + Fluent Bit）の場合
 * TBD: 今後作成予定
 
 ```sh
 TBD
 ```
-  
-#### 13.5.2. 5.2 StepFunctionsのステートマシンの作成
+
+#### 13.5.2. StepFunctionsのステートマシンの作成
 
 > [!NOTE]
 > 現在のMapの実装例は、Mapのインプットとなるデータセットを前方のジョブの実行結果として`Output`に保存し、Mapで`Items`を利用して、`$states.input.*`から受け渡すため、Step Functionsのメモリ上で扱っているが、[AWSの開発者ガイド](https://docs.aws.amazon.com/ja_jp/step-functions/latest/dg/state-map-distributed.html)にも記載があるように、データセットのサイズが256KiBを超えている」、「ワークフローの実行イベント履歴が25,000 エントリを超えている」、「40回を超える並行イテレーションの同時実行が必要」といった場合には、S3に、JSONまたはCSVデータセットを置き、`ItemReader`を利用してMapのインプットとしてS3のパスを指定する方法がある。  
