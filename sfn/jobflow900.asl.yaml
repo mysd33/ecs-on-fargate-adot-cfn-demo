@@ -25,7 +25,6 @@ States:
     Retry:
       - ErrorEquals:
           - Batch.ServerException
-          - Batch.AWSBatchException
         BackoffRate: 2
         IntervalSeconds: 10
         MaxAttempts: 3
@@ -53,7 +52,6 @@ States:
     Retry:
       - ErrorEquals:
           - Batch.ServerException
-          - Batch.AWSBatchException
         BackoffRate: 2
         IntervalSeconds: 10
         MaxAttempts: 3
