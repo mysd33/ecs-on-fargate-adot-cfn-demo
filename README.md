@@ -64,7 +64,10 @@
     * Map内の実行結果2（このうち1件の子ワークフローの実行結果の例）
 
     ![ジョブフロー920_Map2](img/jobflow920_map2.png)
-    
+
+> [!NOTE]
+> [AWSの開発者ガイド](https://docs.aws.amazon.com/ja_jp/step-functions/latest/dg/state-map-distributed.html)にも記載があるように、データセットのサイズが256KiBを超えている」、「ワークフローの実行イベント履歴が25,000 エントリを超えている」、「40回を超える並行イテレーションの同時実行が必要」といった場合には、分散モードの利用が必要になる。また、現在のMapの実装例は、Mapのインプットとなるデータセットを前方のジョブの実行結果として`Output`に保存し、Mapで`Items`を利用して、`$states.input.*`から受け渡すため、Step Functionsのメモリ上で扱っているが、大量のデータ件数を扱うときには、S3に、JSONまたはCSVデータセットを置き、`ItemReader`を利用してMapのインプットとしてS3のパスを指定する方法がある。  
+> なお、AWS BatchへのSubmitJobの最大秒間トランザクション数 (TPS)：50は、ハードリミットによるクォータであるため、同時実行数が多い場合には、Mapの`MaxConcurrency`を50以下に設定して制限したり、`WAIT`ステートでランダムな待ち時間を設定し同時実行タイミングをずらしたり、ItemBatcherやAWS Batchの配列ジョブを使って複数のアイテムをまとめて渡しAP側での多重実行（例：Spring BatchのPartitioning Step）を実施する等、処理時間の要件を遵守しつつスロットリングを回避できるような工夫が必要になる場合がある。   
 
 ### 1.4. CI/CD
 * CodePipeline、CodeBuild、CodeDeployを使った、CI/CDに対応。
@@ -490,10 +493,6 @@ TBD
 ```
 
 #### 13.5.2. StepFunctionsのステートマシンの作成
-
-> [!NOTE]
-> 現在のMapの実装例は、Mapのインプットとなるデータセットを前方のジョブの実行結果として`Output`に保存し、Mapで`Items`を利用して、`$states.input.*`から受け渡すため、Step Functionsのメモリ上で扱っているが、[AWSの開発者ガイド](https://docs.aws.amazon.com/ja_jp/step-functions/latest/dg/state-map-distributed.html)にも記載があるように、データセットのサイズが256KiBを超えている」、「ワークフローの実行イベント履歴が25,000 エントリを超えている」、「40回を超える並行イテレーションの同時実行が必要」といった場合には、S3に、JSONまたはCSVデータセットを置き、`ItemReader`を利用してMapのインプットとしてS3のパスを指定する方法がある。  
-> また、AWS BatchへのSubmitJobの最大秒間トランザクション数 (TPS)：50は、ハードリミットによるクォータであるため、同時実行数が多い場合には、Mapの`MaxConcurrency`を50以下に設定したり、Retryの設定をしたり、`WAIT`で同時実行タイミングをずらしたり、ItemBatcherやAWS Batchの配列ジョブを使って複数のアイテムをまとめて処理する、AP側で多重実行（例：Spring BatchのPartitioning Step）に対応する等、処理時間の要件を遵守しつつスロットリングを回避できるようないずれかの工夫が必要になる場合がある。
 
 * CloudFormation内で参照するStep Functionsのステートマシン定義ファイル（asl.yaml）を、S3にアップロードしあらかじめ格納しておく
     * `(バケット名)/sfn`配下に配置することとする
