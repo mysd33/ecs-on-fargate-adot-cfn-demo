@@ -32,7 +32,11 @@ States:
   MapJobs:
     Type: Map
     Label: MapJobs
+    Comment: 親のワークフローのcontextを子ワークフローから直接参照できないため、ItemSelectorで、executionIdなどを引継ぐ例になっている    
     Items: "{% $states.input.jobResult.list %}"
+    ItemSelector:
+      inputValue: "{% $states.context.Map.Item.Value %}"
+      executionId: "{% $states.context.Execution.Input.executionId %}"
     MaxConcurrency: 50
     ItemProcessor:
       ProcessorConfig:
@@ -53,7 +57,8 @@ States:
                     - Name: batch-jobflow
                       Command:
                         - --spring.batch.job.name=job922
-                        - "{% 'inputData=' & $string($states.input) %}"
+                        - "{% 'inputData=' & $string($states.input.inputValue)
+                          %}"
                         - "{% 'executionId=' &
                           $states.context.Execution.Input.executionId %}"
                       Environment:
