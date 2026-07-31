@@ -196,7 +196,10 @@ Resources:
               Value: DEBUG
             - Name: DB_SECRETS_NAME
               Value:
-                Fn::ImportValue: !Sub ${StackPrefix}-RDSSecretsManagerName              
+                Fn::ImportValue: !Sub ${StackPrefix}-RDSSecretsManagerName
+            - Name: BASIC_AUTH_SECRETS_NAME
+              Value:
+                Fn::ImportValue: !Sub ${StackPrefix}-BasicAuthSecretsManagerName
             - Name: LOGGING_LEVEL_IO_AWSPRING_CLOUD_SECRETSMANAGER
               Value: DEBUG
             # ADOT Environment Variables
@@ -289,7 +292,10 @@ Resources:
               Value: DEBUG
             - Name: DB_SECRETS_NAME
               Value:
-                Fn::ImportValue: !Sub ${StackPrefix}-RDSSecretsManagerName              
+                Fn::ImportValue: !Sub ${StackPrefix}-RDSSecretsManagerName
+            - Name: BASIC_AUTH_SECRETS_NAME
+              Value:
+                Fn::ImportValue: !Sub ${StackPrefix}-BasicAuthSecretsManagerName
             - Name: LOGGING_LEVEL_IO_AWSPRING_CLOUD_SECRETSMANAGER
               Value: DEBUG
             # ADOT Environment Variables
@@ -378,7 +384,10 @@ Resources:
               Value: DEBUG
             - Name: DB_SECRETS_NAME
               Value:
-                Fn::ImportValue: !Sub ${StackPrefix}-RDSSecretsManagerName              
+                Fn::ImportValue: !Sub ${StackPrefix}-RDSSecretsManagerName
+            - Name: BASIC_AUTH_SECRETS_NAME
+              Value:
+                Fn::ImportValue: !Sub ${StackPrefix}-BasicAuthSecretsManagerName
             - Name: LOGGING_LEVEL_IO_AWSPRING_CLOUD_SECRETSMANAGER
               Value: DEBUG              
             # ADOT Environment Variables

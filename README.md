@@ -354,7 +354,7 @@ aws cloudformation create-stack --stack-name ECS-ECACHE-Stack --template-body fi
 > https://zenn.dev/ktny/articles/9ccd18cd19c26d
 > https://ca-srg.dev/6d99a5ff263346cbaebec589ee744db1
 
-## 8. RDB環境構築
+## 8. シークレット作成
 ### 8.1. Secrets Managerの作成
 * Auroraの認証情報をSecretsManagerに作成する。
 ```sh
@@ -366,7 +366,8 @@ aws cloudformation create-stack --stack-name ECS-SM-Stack --template-body file:/
 aws secretsmanager get-secret-value --secret-id /secrets/database-secrets
 ```
 
-### 8.2. Aurora Serverless v2 for PostgreSQLのクラスタの作成
+## 9. RDB環境構築
+### 9.1. Aurora Serverless v2 for PostgreSQLのクラスタの作成
 * 各サンプルAPではRDBでデータ管理するため、Aurora Serverless v2 for PostgreSQLを作成する。  
     * 作成にしばらく時間がかかる。（20分程度）
     * 最小0ACUで、[自動一時停止機能](https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/aurora-serverless-v2-auto-pause.html)を有効化にすることでコストを抑えるようにしている。
@@ -376,22 +377,22 @@ aws cloudformation validate-template --template-body file://cfn-rds-aurora.yaml
 aws cloudformation create-stack --stack-name ECS-Aurora-Stack --template-body file://cfn-rds-aurora.yaml
 ```
 
-## 9. SQS環境構築
-### 9.1. SQSの作成
+## 10. SQS環境構築
+### 10.1. SQSの作成
 ```sh
 aws cloudformation validate-template --template-body file://cfn-sqs.yaml
 aws cloudformation create-stack --stack-name ECS-SQS-Stack --template-body file://cfn-sqs.yaml
 ```
 
-## 10. DynamoDB環境構築
-### 10.1. DynamoDBのホテルテーブル作成
+## 11. DynamoDB環境構築
+### 11.1. DynamoDBのホテルテーブル作成
 ```sh
 aws cloudformation validate-template --template-body file://cfn-dynamodb.yaml
 aws cloudformation create-stack --stack-name ECS-DYNAMODB-Stack --template-body file://cfn-dynamodb.yaml
 ```
 
-## 11. ロードバランサ環境構築
-### 11.1. ALBの作成
+## 12. ロードバランサ環境構築
+### 12.1. ALBの作成
 * ECSの前方で動作するALBとデフォルトのTarget Group等を作成
     * （ローリングアップデートの場合）パラメータTargateGroupAttributesに「deregistration_delay.timeout_seconds」を「60」で設定し、ローリングアップデートの時間を短縮する工夫している。
     * 実機確認し設定しているが、AP起動が遅くヘルスチェックに失敗する場合には、パラメータ「HealthCheckIntervalSeconds」の値を長く調整するとよい。
@@ -413,8 +414,8 @@ aws cloudformation create-stack --stack-name ECS-TG-BG-Stack --template-body fil
 ~~aws cloudformation validate-template --template-body file://cfn-tg.yaml~~
 ~~aws cloudformation create-stack --stack-name ECS-TG-Stack --template-body file://cfn-tg.yaml~~
 
-## 12. パラメータストア環境構築
-### 12.1. Systems Manager Parameter Storeの作成
+## 13. パラメータストア環境構築
+### 13.1. Systems Manager Parameter Storeの作成
 ```sh
 aws cloudformation validate-template --template-body file://cfn-ssm-param.yaml
 aws cloudformation create-stack --stack-name ECS-SSM-PARAM-Stack --template-body file://cfn-ssm-param.yaml
@@ -424,30 +425,30 @@ aws cloudformation create-stack --stack-name ECS-SSM-PARAM-Stack --template-body
     * 「--parameters ParameterKey=AppDataS3BucketName,ParameterValue=(バケット名)」
 
 
-## 13. コンテナ環境構築
-### 13.1. ECSクラスタの作成
+## 14. コンテナ環境構築
+### 14.1. ECSクラスタの作成
 ```sh
 aws cloudformation validate-template --template-body file://cfn-ecs-cluster.yaml
 aws cloudformation create-stack --stack-name ECS-CLUSTER-Stack --template-body file://cfn-ecs-cluster.yaml
 ```
 
-### 13.2. ECSタスク定義の作成
-#### 13.2.1. ログ転送先がCloud Watch Logs（awslogsドライバ）の場合
+### 14.2. ECSタスク定義の作成
+#### 14.2.1. ログ転送先がCloud Watch Logs（awslogsドライバ）の場合
 * awslogsドライバのタスク定義を作成
 ```sh
 aws cloudformation validate-template --template-body file://cfn-ecs-task.yaml
 aws cloudformation create-stack --stack-name ECS-TASK-Stack --template-body file://cfn-ecs-task.yaml
 ```
 
-#### 13.2.2. カスタムログルーティング（FireLens + Fluent Bit）の場合
+#### 14.2.2. カスタムログルーティング（FireLens + Fluent Bit）の場合
 * awsfirelensドライバのタスク定義を作成
 ```sh
 aws cloudformation validate-template --template-body file://cfn-ecs-task-firelens.yaml
 aws cloudformation create-stack --stack-name ECS-TASK-Stack --template-body file://cfn-ecs-task-firelens.yaml
 ```
 
-### 13.3. ECSサービスの実行
-#### 13.3.1. ローリングアップデートの場合
+### 14.3. ECSサービスの実行
+#### 14.3.1. ローリングアップデートの場合
 * ローリングアップデートの場合は以下を実行
 ```sh
 aws cloudformation validate-template --template-body file://cfn-ecs-service.yaml
@@ -456,7 +457,7 @@ aws cloudformation create-stack --stack-name ECS-SERVICE-Stack --template-body f
 * パラメータMinimumHealthyPercentを0%にしてローリングアップデートの時間を短縮する工夫をしている
 * 実機確認し設定しているが、AP起動が遅くヘルスチェックに失敗する場合には、パラメータ「HealthCheckGracePeriodSeconds」の値を長くしてヘルスチェックの猶予時間を調整するとよい。
 
-#### 13.3.2. BlueGreenデプロイメントの場合
+#### 14.3.2. BlueGreenデプロイメントの場合
 * BlueGreenデプロイメントの場合は以下のパラメータを指定して起動
     * バッチAPについては、ローリングアップデート
 
@@ -467,7 +468,7 @@ aws cloudformation create-stack --stack-name ECS-SERVICE-Stack --template-body f
 
 * 実機確認し設定しているが、AP起動が遅くヘルスチェックに失敗する場合には、パラメータ「HealthCheckGracePeriodSeconds」の値を長くしてヘルスチェックの猶予時間を調整するとよい。
 
-### 13.4. スケジュール起動でのバッチ処理ECS Taskの起動
+### 14.4. スケジュール起動でのバッチ処理ECS Taskの起動
 * スタックが作成されると、EventBridge Schedulerにより1分ごとにスケジュールバッチ起動用アプリケーションのコンテナが起動する
     * サンプルAPの仕様上、スケジュール経過後次々に実行されバッチ起動するごとに登録データが増えていくので、動作確認できたらスタック削除するとよい。
 ```sh
@@ -475,9 +476,9 @@ aws cloudformation validate-template --template-body file://cfn-ecs-scheduleeven
 aws cloudformation create-stack --stack-name ECS-SCHEDULE-EVENT-Stack --template-body file://cfn-ecs-scheduleevent.yaml
 ```
 
-### 13.5. ジョブフローでのバッチ処理の起動
-#### 13.5.1. AWS Batchのジョブ定義等の作成
-##### 13.5.1.1. ログ転送先がCloud Watch Logs（awslogsドライバ）の場合
+### 14.5. ジョブフローでのバッチ処理の起動
+#### 14.5.1. AWS Batchのジョブ定義等の作成
+##### 14.5.1.1. ログ転送先がCloud Watch Logs（awslogsドライバ）の場合
 * awslogsドライバでのジョブ定義を作成
 
 ```sh
@@ -485,14 +486,14 @@ aws cloudformation validate-template --template-body file://cfn-awsbatch.yaml
 aws cloudformation create-stack --stack-name AWS-BATCH-Stack --template-body file://cfn-awsbatch.yaml
 ```
 
-##### 13.5.1.2. カスタムログルーティング（FireLens + Fluent Bit）の場合
+##### 14.5.1.2. カスタムログルーティング（FireLens + Fluent Bit）の場合
 * TBD: 今後作成予定
 
 ```sh
 TBD
 ```
 
-#### 13.5.2. StepFunctionsのステートマシンの作成
+#### 14.5.2. StepFunctionsのステートマシンの作成
 
 * CloudFormation内で参照するStep Functionsのステートマシン定義ファイル（asl.yaml）を、S3にアップロードしあらかじめ格納しておく
     * `(バケット名)/sfn`配下に配置することとする
@@ -529,7 +530,7 @@ TBD
         * 動作させるためには、状態の入力として`executionId`を指定する必要がある。適当な文字列を指定すればよい。
         * 例）`{"executionId":"1"}`
 
-### 13.6. EventBridge Schedulerによるステートマシンのスケジュール起動
+### 14.6. EventBridge Schedulerによるステートマシンのスケジュール起動
 * サンプルAPの仕様上、スケジュール経過後次々に実行されるので、動作確認できたらスタック削除するとよい。
 ```sh
 aws cloudformation validate-template --template-body file://cfn-sfn-scheduleevent.yaml
@@ -537,7 +538,7 @@ aws cloudformation create-stack --stack-name SFN-SCHEDULE-Stack --template-body 
 ```
  
 
-### 13.7. APの実行確認
+### 14.7. APの実行確認
 * Backendアプリケーションの確認  
     * VPCのパブリックサブネット上にBationのEC2を起動
     
@@ -627,7 +628,7 @@ psql -h (Auroraのクラスタエンドポイント) -U postgres -d testdb
 > select * from todo;  
 ```
 
-### 13.8. Application AutoScalingの設定
+### 14.8. Application AutoScalingの設定
 * 以下のコマンドで、ターゲット追跡スケーリングポリシーでオートスケーリング設定
 ```sh
 aws cloudformation validate-template --template-body file://cfn-ecs-autoscaling.yaml
@@ -651,9 +652,9 @@ aws cloudformation create-stack --stack-name ECS-AutoScaling-Stack --template-bo
 * 対象のECSサービスがスケールアウトされ、1タスク追加され2タスクになっていることを確認
 * abコマンドが終了し、しばらくたつと、対象のECSサービスがスケールインされ、1タスクに戻っていることを確認
 
-## 14. CD環境構築（ローリングアップデートの場合）
+## 15. CD環境構築（ローリングアップデートの場合）
 * ローリングアップデートの場合は、以下のコマンドを実行
-### 14.1. ローリングアップデート対応のCodePipelineの作成
+### 15.1. ローリングアップデート対応のCodePipelineの作成
 * BFFアプリケーション
 ```sh
 aws cloudformation validate-template --template-body file://cfn-codepipeline-bff.yaml
@@ -682,16 +683,16 @@ aws cloudformation create-stack --stack-name Batch-CodePipeline-Stack --template
 
 * Artifact用のS3バケット名を変えるには、それぞれのcfnスタック作成時のコマンドでパラメータを指定する
     * 「--parameters ParameterKey=ArtifactS3BucketName,ParameterValue=(バケット名)」
-### 14.2. CodePipelineの確認
+### 15.2. CodePipelineの確認
 * CodePipelineの作成後、パイプラインが自動実行されるので、デプロイ成功することを確認する
 
-### 14.3. ソースコードの変更
+### 15.3. ソースコードの変更
 * 何らかのソースコードの変更を加えて、CodeCommitにプッシュする
 * CodePipelineのパイプラインが実行され、新しいAPがデプロイされることを確認する
 
-## 15. CD環境構築（BlueGreenデプロイメントの場合）
+## 16. CD環境構築（BlueGreenデプロイメントの場合）
 * BlueGreenデプロイメントの場合は、以下のコマンドを実行
-### 15.1. CodeDeployの作成
+### 16.1. CodeDeployの作成
 * BFFアプリケーション
 ```sh
 aws cloudformation validate-template --template-body file://cfn-bff-codedeploy.yaml
@@ -708,7 +709,7 @@ aws cloudformation create-stack --stack-name Backend-CodeDeploy-Stack --template
     * 「--parameters ParameterKey=ArtifactS3BucketName,ParameterValue=(バケット名)」  
 * 現状、テンプレート内の「DeploymentConfigName」が線形リリース（「CodeDeployDefault.ECSLinear10PercentEvery1Minutes」）になっているが、一度に切り替えたい場合は、通常のBlueGreenデプロイメント（CodeDeployDefault.ECSAllAtOnce）に変えるとよい。    
 
-### 15.2. BlueGreenデプロイメント対応のCodePipelineの作成
+### 16.2. BlueGreenデプロイメント対応のCodePipelineの作成
 
 * BFFアプリケーション
 ```sh
@@ -739,13 +740,13 @@ aws cloudformation create-stack --stack-name Batch-CodePipeline-Stack --template
 
 * Artifact用のS3バケット名を変えるには、それぞれのcfnスタック作成時のコマンドでパラメータを指定する
     * 「--parameters ParameterKey=ArtifactS3BucketName,ParameterValue=(バケット名)」
-### 15.3. CodePipelineの確認
+### 16.3. CodePipelineの確認
 * CodePipelineの作成後、パイプラインが自動実行されるので、デプロイ成功することを確認する
-### 15.4. ソースコードの変更
+### 16.4. ソースコードの変更
 * 何らかのソースコードの変更を加えて、CodeCommitにプッシュする
 * CodePipelineのパイプラインが実行され、新しいAPがデプロイされることを確認する
 
-## 16. AWSリソースの削除
+## 17. AWSリソースの削除
 
 ```sh
 aws cloudformation delete-stack --stack-name Batch-CodePipeline-Stack
@@ -791,7 +792,7 @@ aws cloudformation delete-stack --stack-name ECR-Stack
 
 ```
 
-## 17. （参考）CloudFormationコマンド文法メモ
+## 18. （参考）CloudFormationコマンド文法メモ
 * スタックの新規作成
 ```sh
 aws cloudformation create-stack --stack-name myteststack --template-body file://cfn-ec2.yaml
