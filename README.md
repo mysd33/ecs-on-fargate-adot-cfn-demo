@@ -762,7 +762,7 @@ aws cloudformation delete-stack --stack-name Bff-CodePipeline-Stack
 aws cloudformation delete-stack --stack-name Backend-CodeDeploy-Stack
 aws cloudformation delete-stack --stack-name Bff-CodeDeploy-Stack
 
-aws cloudformation delete-stack --stack-name ECS-Bastion-Stack
+aws cloudformation delete-stack --stack-name Demo-Bastion-Stack
 
 aws cloudformation delete-stack --stack-name SFN-SCHEDULE-Stack
 aws cloudformation delete-stack --stack-name SFN-Stack
