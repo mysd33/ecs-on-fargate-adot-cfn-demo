@@ -24,6 +24,8 @@ Resources:
       KeySchema:
         - AttributeName: todoId
           KeyType:  HASH
+        - AttributeName: userId
+          KeyType: RANGE
       AttributeDefinitions:
         - AttributeName: todoId
           AttributeType: S
