@@ -1,0 +1,23 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Keycloak on ECS Template for CloudFormation Demo.
+#Metadata: 
+
+Parameters: 
+  StackPrefix:
+    Description: Stack Resource Name Prefix
+    Type: String
+    Default: Demo
+ 
+#Mappings: 
+
+#Conditions: 
+
+Resources: 
+# ALB
+# ALB Target Group
+# ALB Listener
+# ECS Cluster
+# ECS Task Definition
+# ECS Service
+
+#Outputs:

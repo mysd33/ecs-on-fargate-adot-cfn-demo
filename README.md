@@ -36,6 +36,15 @@
     
         ![純バッチ処理イメージ](img/ecs-batch-jobflow.png)
 
+* ユーザ認証・認可（OIDC）
+    * OIDCプロバイダのOSS製品であるKeycloakを利用し、認可コードグラントによるユーザ認証（SSO）、バックチャネルログアウトにも対応したSLOの実装をしている。
+        * TODO:図
+
+* API認可（OAuth2.0）
+    * OIDCによるユーザ認証後、バックエンド（リソースサーバとの連携）において、Keycloakを利用したOAuth2.0のアクセストークンによるAPI認可の実装をしている。
+        * アクセストークンの検証には、イントロスペクションエンドポイントにも対応した例になっている。
+        * TODO:図
+
 
 ### 1.3. StepFunctionsによるジョブフロー実行制御
 * 本サンプルでは、StepFunctionsのステートマシンを使った典型的なジョブフローのパターンを用意している。
@@ -69,7 +78,10 @@
 > [AWSの開発者ガイド](https://docs.aws.amazon.com/ja_jp/step-functions/latest/dg/state-map-distributed.html)にも記載があるように、データセットのサイズが256KiBを超えている」、「ワークフローの実行イベント履歴が25,000 エントリを超えている」、「40回を超える並行イテレーションの同時実行が必要」といった場合には、分散モードの利用が必要になる。また、現在のMapの実装例は、Mapのインプットとなるデータセットを前方のジョブの実行結果として`Output`に保存し、Mapで`Items`を利用して、`$states.input.*`から受け渡すため、Step Functionsのメモリ上で扱っているが、大量のデータ件数を扱うときには、S3に、JSONまたはCSVデータセットを置き、`ItemReader`を利用してMapのインプットとしてS3のパスを指定する方法がある。  
 > なお、AWS BatchへのSubmitJobの最大秒間トランザクション数 (TPS)：50は、ハードリミットによるクォータであるため、同時実行数が多い場合には、Mapの`MaxConcurrency`を50以下に設定して制限したり、`WAIT`ステートでランダムな待ち時間を設定し同時実行タイミングをずらしたり、ItemBatcherやAWS Batchの配列ジョブを使って複数のアイテムをまとめて渡しAP側での多重実行（例：Spring BatchのPartitioning Step）を実施する等、処理時間の要件を遵守しつつスロットリングを回避できるような工夫が必要になる場合がある。   
 
-### 1.4. CI/CD
+### 1.4. OIDC/OAuth2.0の対応
+* TBD: 認可コードグラントによるユーザ認証（SSO）、アクセストークンによるAPI認可、バックチャネルログアウトに対応したSLOのシーケンス図を記載予定。
+
+### 1.5. CI/CD
 * CodePipeline、CodeBuild、CodeDeployを使った、CI/CDに対応。
 * CDは標準のローリングアップデートとBlueGreenデプロイメントの２つのリリース方式に対応している。（バッチAPは、ELB未使用のためローリングアップデートのみ対応）
     * ローリングアップデート
@@ -84,7 +96,7 @@
 >    [2025年7月](https://aws.amazon.com/jp/blogs/news/accelerate-safe-software-releases-with-new-built-in-blue-green-deployments-in-amazon-ecs/)よりECSの組み込みのBlueGreenデプロイメントが利用できるようになったが、本サンプルでは、CodeDeployを使った従来のBlueGreenデプロイメントのままとしている。  
 >    今後、対応を検討。
 
-### 1.5. 性能・拡張性対策
+### 1.6. 性能・拡張性対策
 * APの拡張性:オートスケーリング
     * 平均CPU使用率のターゲット追跡スケーリングポリシーによる例に対応している。
 
@@ -96,14 +108,14 @@
 
         ![リードレプリカ活用](img/aurora-read-replica.png)
 
-### 1.6. 環境依存パラメータの外部管理化
+### 1.7. 環境依存パラメータの外部管理化
 * Systems Manager Parameter Store、Secrets Managerの利用
     * APの環境依存パラメータに関してSystems Manager Parameter Store、DBやBasic認証の認証情報に関してSecrets Managerを使って、アプリケーションの設定情報を外部化している。
     * Spring Cloud for AWSの機能を使って、ECSのタスク定義の環境変数に値を設定することなく、直接APが値を取得し、Spring Bootのプロパティ管理と統合された形で利用できるようになっている。    
 
         ![パラメータ外部化](img/ssmparam_scretsmaanger.png)
 
-### 1.7. オブザーバビリティ（定量的可視化）
+### 1.8. オブザーバビリティ（定量的可視化）
 * ログの転送
     * awslogsドライバを使ったCloudWatch Logsへのログ転送とFireLens+Fluent Bitによるログ転送に対応。
     * Firelensの場合はFirelensをサイドカーコンテナとして配置する必要がある。
@@ -419,8 +431,112 @@ aws cloudformation create-stack --stack-name ECS-TG-BG-Stack --template-body fil
 ~~aws cloudformation validate-template --template-body file://cfn-tg.yaml~~
 ~~aws cloudformation create-stack --stack-name ECS-TG-Stack --template-body file://cfn-tg.yaml~~
 
-## 12. パラメータストア環境構築
-### 12.1. Systems Manager Parameter Storeの作成
+## 12. Bastionの構築
+
+### 12.1. BastionのEC2作成
+* VPCのパブリックサブネット上にBastionのEC2を起動
+    
+    ```sh
+    aws cloudformation validate-template --template-body file://cfn-bastion-ec2.yaml
+    aws cloudformation create-stack --stack-name Demo-Bastion-Stack --template-body file://cfn-bastion-ec2.yaml
+    ```
+
+* 必要に応じてキーペア名等のパラメータを指定
+    * 「--parameters ParameterKey=KeyPairName,ParameterValue=myKeyPair」
+
+* System Manager Session Managerを使ってBastionのEC2に接続できる。
+
+### 12.2. psqlのインストール
+* BastionからpsqlでAuroraにアクセスしたい場合、以下参考に、Bastionにpsqlをインストールするとよい
+    * https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/CHAP_GettingStarted.CreatingConnecting.PostgreSQL.html#CHAP_GettingStarted.Connecting.PostgreSQL
+
+* Bastionに接続後、以下のコマンドを実行
+
+```sh
+sudo dnf update -y
+
+sudo dnf install postgresql18 -y
+
+#DBに接続    
+psql -h (Auroraのクラスタエンドポイント) -U postgres -d testdb    
+# CloudFormationの「ECS-Aurora-Stack」スタックの出力「RDSClusterEndpointAddress」の値を参照
+# パスワードは、SecretsManagerの「Demo-SM-Secrets」の「password」の値を参照し入力
+```
+
+
+### 12.3. redis-Cli（またはvalkey-cli）のインストール
+* Bastionからredis-cliでElastiCacheにアクセスしたい場合、以下参考に、redis-cliをインストールして接続するとよい
+    * https://docs.aws.amazon.com/ja_jp/AmazonElastiCache/latest/dg/set-up.html#Download-and-install-cli
+
+    ```sh
+    sudo yum install redis6 -y
+
+    redis6-cli -h (ElastiCacheのEndpoint) --tls
+    # CloudFormationの「ECS-ECACHE-Stack」スタックの出力「ElastiCachePrimaryEndPoint」
+
+    > keys *  
+    ```
+
+* valkey-cliを使用したい場合は、以下を参考に、valkey-cliをインストールして接続するとよい
+    * https://aws.amazon.com/jp/blogs/news/get-started-with-amazon-elasticache-for-valkey/
+
+    ```sh
+    sudo yum install gcc jemalloc-devel openssl-devel tcl tcl-devel -y 
+    cd ~
+    wget https://github.com/valkey-io/valkey/archive/refs/tags/7.2.7.tar.gz
+    tar xvzf 7.2.7.tar.gz 
+    cd valkey-7.2.7/ 
+    sudo make BUILD_TLS=yes install
+
+    valkey-cli -h (ElastiCacheのEndpoint) --tls
+    ```
+
+## 13. OIDCプロバイダ（Keycloak）の環境構築
+### 13.1. Keycloak DockerイメージのビルドとECRへのプッシュ
+
+* 以前の手順で、未実行の場合であれば、コマンドを実行
+
+```sh
+set AWS_ACCOUNT_ID=(アカウントID)
+set AWS_REGION=(リージョン)　#例: set AWS_REGION=ap-northeast-1
+aws ecr get-login-password --region %AWS_REGION% | docker login --username AWS --password-stdin %AWS_ACCOUNT_ID%.dkr.ecr.%AWS_REGION%.amazonaws.com
+```
+
+* keycloakディレクトリに移動して、DockerイメージをビルドしECRにプッシュ
+
+```sh
+cd keycloak
+docker build -t keycloak-sample .
+docker tag keycloak-sample:latest %AWS_ACCOUNT_ID%.dkr.ecr.%AWS_REGION%.amazonaws.com/keycloak-sample:latest
+docker push %AWS_ACCOUNT_ID%.dkr.ecr.%AWS_REGION%.amazonaws.com/keycloak-sample:latest
+```
+
+### Keycloak用のDBの作成
+* BastionへSystem Manager Session Managerなどを使って接続
+* Aurora上にKeycloak用のDBを作成する場合の例
+```sh
+psql -h (Auroraのクラスタエンドポイント) -U postgres -d testdb
+CREATE DATABASE keycloak;
+```
+
+
+### Keycloak用のALB、ECSクラスタ、タスク定義、サービスの構築
+* TODO: IAM、Security Groupなどの設定もCfnテンプレートに追加する
+* TODO: ALB、ECSクラスタ、タスク定義、サービスを作成するCfnテンプレートを作成する
+
+```sh
+aws cloudformation validate-template --template-body file://cfn-ecs-keycloak.yaml
+aws cloudformation create-stack --stack-name ECS-KEYCLOAK-Stack --template-body file://cfn-ecs-keycloak.yaml
+```
+
+### Keycloakの設定インポート（Dockefile内であらかじめ実行しておく？）
+
+
+* TODO: SecretsManagerにクライアントシークレットを追加し、それ以外のSpring Security OAuth2.0用の必要なパラメータをパラメータストア追加する
+* BFFとBackendのECSのタスク定義にプロファイルoidcを追加する
+
+## 14. パラメータストア環境構築
+### 14.1. Systems Manager Parameter Storeの作成
 ```sh
 aws cloudformation validate-template --template-body file://cfn-ssm-param.yaml
 aws cloudformation create-stack --stack-name ECS-SSM-PARAM-Stack --template-body file://cfn-ssm-param.yaml
@@ -430,30 +546,30 @@ aws cloudformation create-stack --stack-name ECS-SSM-PARAM-Stack --template-body
     * 「--parameters ParameterKey=AppDataS3BucketName,ParameterValue=(バケット名)」
 
 
-## 13. コンテナ環境構築
-### 13.1. ECSクラスタの作成
+## 15. コンテナ環境構築
+### 15.1. ECSクラスタの作成
 ```sh
 aws cloudformation validate-template --template-body file://cfn-ecs-cluster.yaml
 aws cloudformation create-stack --stack-name ECS-CLUSTER-Stack --template-body file://cfn-ecs-cluster.yaml
 ```
 
-### 13.2. ECSタスク定義の作成
-#### 13.2.1. ログ転送先がCloud Watch Logs（awslogsドライバ）の場合
+### 15.2. ECSタスク定義の作成
+#### 15.2.1. ログ転送先がCloud Watch Logs（awslogsドライバ）の場合
 * awslogsドライバのタスク定義を作成
 ```sh
 aws cloudformation validate-template --template-body file://cfn-ecs-task.yaml
 aws cloudformation create-stack --stack-name ECS-TASK-Stack --template-body file://cfn-ecs-task.yaml
 ```
 
-#### 13.2.2. カスタムログルーティング（FireLens + Fluent Bit）の場合
+#### 15.2.2. カスタムログルーティング（FireLens + Fluent Bit）の場合
 * awsfirelensドライバのタスク定義を作成
 ```sh
 aws cloudformation validate-template --template-body file://cfn-ecs-task-firelens.yaml
 aws cloudformation create-stack --stack-name ECS-TASK-Stack --template-body file://cfn-ecs-task-firelens.yaml
 ```
 
-### 13.3. ECSサービスの実行
-#### 13.3.1. ローリングアップデートの場合
+### 15.3. ECSサービスの実行
+#### 15.3.1. ローリングアップデートの場合
 * ローリングアップデートの場合は以下を実行
 ```sh
 aws cloudformation validate-template --template-body file://cfn-ecs-service.yaml
@@ -462,7 +578,7 @@ aws cloudformation create-stack --stack-name ECS-SERVICE-Stack --template-body f
 * パラメータMinimumHealthyPercentを0%にしてローリングアップデートの時間を短縮する工夫をしている
 * 実機確認し設定しているが、AP起動が遅くヘルスチェックに失敗する場合には、パラメータ「HealthCheckGracePeriodSeconds」の値を長くしてヘルスチェックの猶予時間を調整するとよい。
 
-#### 13.3.2. BlueGreenデプロイメントの場合
+#### 15.3.2. BlueGreenデプロイメントの場合
 * BlueGreenデプロイメントの場合は以下のパラメータを指定して起動
     * バッチAPについては、ローリングアップデート
 
@@ -473,7 +589,7 @@ aws cloudformation create-stack --stack-name ECS-SERVICE-Stack --template-body f
 
 * 実機確認し設定しているが、AP起動が遅くヘルスチェックに失敗する場合には、パラメータ「HealthCheckGracePeriodSeconds」の値を長くしてヘルスチェックの猶予時間を調整するとよい。
 
-### 13.4. スケジュール起動でのバッチ処理ECS Taskの起動
+### 15.4. スケジュール起動でのバッチ処理ECS Taskの起動
 * スタックが作成されると、EventBridge Schedulerにより1分ごとにスケジュールバッチ起動用アプリケーションのコンテナが起動する
     * サンプルAPの仕様上、スケジュール経過後次々に実行されバッチ起動するごとに登録データが増えていくので、動作確認できたらスタック削除するとよい。
 ```sh
@@ -481,9 +597,9 @@ aws cloudformation validate-template --template-body file://cfn-ecs-scheduleeven
 aws cloudformation create-stack --stack-name ECS-SCHEDULE-EVENT-Stack --template-body file://cfn-ecs-scheduleevent.yaml
 ```
 
-### 13.5. ジョブフローでのバッチ処理の起動
-#### 13.5.1. AWS Batchのジョブ定義等の作成
-##### 13.5.1.1. ログ転送先がCloud Watch Logs（awslogsドライバ）の場合
+### 15.5. ジョブフローでのバッチ処理の起動
+#### 15.5.1. AWS Batchのジョブ定義等の作成
+##### 15.5.1.1. ログ転送先がCloud Watch Logs（awslogsドライバ）の場合
 * awslogsドライバでのジョブ定義を作成
 
 ```sh
@@ -491,14 +607,14 @@ aws cloudformation validate-template --template-body file://cfn-awsbatch.yaml
 aws cloudformation create-stack --stack-name AWS-BATCH-Stack --template-body file://cfn-awsbatch.yaml
 ```
 
-##### 13.5.1.2. カスタムログルーティング（FireLens + Fluent Bit）の場合
+##### 15.5.1.2. カスタムログルーティング（FireLens + Fluent Bit）の場合
 * TBD: 今後作成予定
 
 ```sh
 TBD
 ```
 
-#### 13.5.2. StepFunctionsのステートマシンの作成
+#### 15.5.2. StepFunctionsのステートマシンの作成
 
 * CloudFormation内で参照するStep Functionsのステートマシン定義ファイル（asl.yaml）を、S3にアップロードしあらかじめ格納しておく
     * `(バケット名)/sfn`配下に配置することとする
@@ -535,7 +651,7 @@ TBD
         * 動作させるためには、状態の入力として`executionId`を指定する必要がある。適当な文字列を指定すればよい。
         * 例）`{"executionId":"1"}`
 
-### 13.6. EventBridge Schedulerによるステートマシンのスケジュール起動
+### 15.6. EventBridge Schedulerによるステートマシンのスケジュール起動
 * サンプルAPの仕様上、スケジュール経過後次々に実行されるので、動作確認できたらスタック削除するとよい。
 ```sh
 aws cloudformation validate-template --template-body file://cfn-sfn-scheduleevent.yaml
@@ -543,19 +659,10 @@ aws cloudformation create-stack --stack-name SFN-SCHEDULE-Stack --template-body 
 ```
  
 
-### 13.7. APの実行確認
-* Bastionの構築
-    * VPCのパブリックサブネット上にBationのEC2を起動
-    
-    ```sh
-    aws cloudformation validate-template --template-body file://cfn-bastion-ec2.yaml
-    aws cloudformation create-stack --stack-name Demo-Bastion-Stack --template-body file://cfn-bastion-ec2.yaml
-    ```
-
-    * 必要に応じてキーペア名等のパラメータを指定
-        * 「--parameters ParameterKey=KeyPairName,ParameterValue=myKeyPair」
-    * マネージドコンソールからEC2にセッションマネージャで接続し、以下のコマンドを「curl http://(Private ALBのDNS名)/api/v1/todos」を入力するとバックエンドサービスAPのJSONレスポンスが返却
-        * CloudFormationの「ECS-SERVICE-Stack」スタックの出力「BackendServiceURI」のURLを参照
+### 15.7. APの実行確認
+* Backend APの確認
+* マネージドコンソールからBastionのEC2にセッションマネージャで接続し、以下のコマンドを「curl http://(Private ALBのDNS名)/api/v1/todos」を入力するとバックエンドサービスAPのJSONレスポンスが返却
+    * CloudFormationの「ECS-SERVICE-Stack」スタックの出力「BackendServiceURI」のURLを参照
 
 * BFFアプリケーションの確認
     * ブラウザで「http://(Public ALBのDNS名)」を入力しフロントエンドAPの画面が表示される
@@ -589,53 +696,42 @@ aws cloudformation create-stack --stack-name SFN-SCHEDULE-Stack --template-body 
                 * /ecs/logs/fluentbit-schedulelaunch-sidecar
         * S3
             * (ログ出力用のバケット)/fluent-bit-logs/
-* Bastionからredis-cliでElastiCacheにアクセスしたい場合
-    * 以下参考に、redis-cliをインストールして接続するとよい
-        * https://docs.aws.amazon.com/ja_jp/AmazonElastiCache/latest/dg/set-up.html#Download-and-install-cli
 
-```sh
-sudo yum install redis6 -y
+* Auroraの確認
+    * BastionからAuroraのDBに接続    
+    
+    ```sh
+    psql -h (Auroraのクラスタエンドポイント) -U postgres -d testdb    
+    # CloudFormationの「ECS-Aurora-Stack」スタックの出力「RDSClusterEndpointAddress」の値を参照
+    # パスワードは、SecretsManagerの「Demo-SM-Secrets」の「password」の値を参照し入力
+    ```
 
-redis6-cli -h (ElastiCacheのEndpoint) --tls
-# CloudFormationの「ECS-ECACHE-Stack」スタックの出力「ElastiCachePrimaryEndPoint」
+    ```sql
+    # テーブルの内容を確認
+    select * from m_user;
+    select * from todo;  
+    ```
 
-> keys *  
-```
+* ElastiCacheの確認
+    * BastionからElastiCacheのRedisに接続
+    ```sh
+    redis6-cli -h (ElastiCacheのEndpoint) --tls
+    # CloudFormationの「ECS-ECACHE-Stack」スタックの出力「ElastiCachePrimaryEndPoint」    
 
-* valkey-cliを使用したい場合
-    * 以下を参考に、valkey-cliをインストールして接続するとよい
-        * https://aws.amazon.com/jp/blogs/news/get-started-with-amazon-elasticache-for-valkey/
+    ```
+    # セッション作成により、Redisのキーがあることを確認
+    > keys * 
+    ```
 
-```sh
-sudo yum install gcc jemalloc-devel openssl-devel tcl tcl-devel -y 
-cd ~
-wget https://github.com/valkey-io/valkey/archive/refs/tags/7.2.7.tar.gz
-tar xvzf 7.2.7.tar.gz 
-cd valkey-7.2.7/ 
-sudo make BUILD_TLS=yes install
+* DynamoDBの確認
+    * マネージドコンソールからDynamoDBのテーブルをスキャンするとよい
+    * AWS CLIを使用してDynamoDBのTodoテーブルをスキャンすることも可能
 
-valkey-cli -h (ElastiCacheのEndpoint) --tls
-```
+        ```sh
+        aws dynamodb scan --table-name Todo（テーブル名）
+        ```
 
-* BastionからpsqlでAuroraにアクセスしたい場合
-   * 以下参考に、Bastionにpsqlをインストールするとよい
-        * https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/CHAP_GettingStarted.CreatingConnecting.PostgreSQL.html#CHAP_GettingStarted.Connecting.PostgreSQL
-
-```sh
-sudo dnf update -y
-
-sudo dnf install postgresql18 -y
-
-#DBに接続    
-psql -h (Auroraのクラスタエンドポイント) -U postgres -d testdb    
-# CloudFormationの「ECS-Aurora-Stack」スタックの出力「RDSClusterEndpointAddress」の値を参照
-# パスワードは、SecretsManagerの「Demo-SM-Secrets」の「password」の値を参照し入力
-
-> select * from m_user;
-> select * from todo;  
-```
-
-### 13.8. Application AutoScalingの設定
+### 15.8. Application AutoScalingの設定
 * 以下のコマンドで、ターゲット追跡スケーリングポリシーでオートスケーリング設定
 ```sh
 aws cloudformation validate-template --template-body file://cfn-ecs-autoscaling.yaml
@@ -659,9 +755,9 @@ aws cloudformation create-stack --stack-name ECS-AutoScaling-Stack --template-bo
 * 対象のECSサービスがスケールアウトされ、1タスク追加され2タスクになっていることを確認
 * abコマンドが終了し、しばらくたつと、対象のECSサービスがスケールインされ、1タスクに戻っていることを確認
 
-## 14. CD環境構築（ローリングアップデートの場合）
+## 16. CD環境構築（ローリングアップデートの場合）
 * ローリングアップデートの場合は、以下のコマンドを実行
-### 14.1. ローリングアップデート対応のCodePipelineの作成
+### 16.1. ローリングアップデート対応のCodePipelineの作成
 * BFFアプリケーション
 ```sh
 aws cloudformation validate-template --template-body file://cfn-codepipeline-bff.yaml
@@ -690,16 +786,16 @@ aws cloudformation create-stack --stack-name Batch-CodePipeline-Stack --template
 
 * Artifact用のS3バケット名を変えるには、それぞれのcfnスタック作成時のコマンドでパラメータを指定する
     * 「--parameters ParameterKey=ArtifactS3BucketName,ParameterValue=(バケット名)」
-### 14.2. CodePipelineの確認
+### 16.2. CodePipelineの確認
 * CodePipelineの作成後、パイプラインが自動実行されるので、デプロイ成功することを確認する
 
-### 14.3. ソースコードの変更
+### 16.3. ソースコードの変更
 * 何らかのソースコードの変更を加えて、CodeCommitにプッシュする
 * CodePipelineのパイプラインが実行され、新しいAPがデプロイされることを確認する
 
-## 15. CD環境構築（BlueGreenデプロイメントの場合）
+## 17. CD環境構築（BlueGreenデプロイメントの場合）
 * BlueGreenデプロイメントの場合は、以下のコマンドを実行
-### 15.1. CodeDeployの作成
+### 17.1. CodeDeployの作成
 * BFFアプリケーション
 ```sh
 aws cloudformation validate-template --template-body file://cfn-bff-codedeploy.yaml
@@ -716,7 +812,7 @@ aws cloudformation create-stack --stack-name Backend-CodeDeploy-Stack --template
     * 「--parameters ParameterKey=ArtifactS3BucketName,ParameterValue=(バケット名)」  
 * 現状、テンプレート内の「DeploymentConfigName」が線形リリース（「CodeDeployDefault.ECSLinear10PercentEvery1Minutes」）になっているが、一度に切り替えたい場合は、通常のBlueGreenデプロイメント（CodeDeployDefault.ECSAllAtOnce）に変えるとよい。    
 
-### 15.2. BlueGreenデプロイメント対応のCodePipelineの作成
+### 17.2. BlueGreenデプロイメント対応のCodePipelineの作成
 
 * BFFアプリケーション
 ```sh
@@ -747,13 +843,13 @@ aws cloudformation create-stack --stack-name Batch-CodePipeline-Stack --template
 
 * Artifact用のS3バケット名を変えるには、それぞれのcfnスタック作成時のコマンドでパラメータを指定する
     * 「--parameters ParameterKey=ArtifactS3BucketName,ParameterValue=(バケット名)」
-### 15.3. CodePipelineの確認
+### 17.3. CodePipelineの確認
 * CodePipelineの作成後、パイプラインが自動実行されるので、デプロイ成功することを確認する
-### 15.4. ソースコードの変更
+### 17.4. ソースコードの変更
 * 何らかのソースコードの変更を加えて、CodeCommitにプッシュする
 * CodePipelineのパイプラインが実行され、新しいAPがデプロイされることを確認する
 
-## 16. AWSリソースの削除
+## 18. AWSリソースの削除
 
 ```sh
 aws cloudformation delete-stack --stack-name Batch-CodePipeline-Stack
@@ -799,7 +895,7 @@ aws cloudformation delete-stack --stack-name ECR-Stack
 
 ```
 
-## 17. （参考）CloudFormationコマンド文法メモ
+## 19. （参考）CloudFormationコマンド文法メモ
 * スタックの新規作成
 ```sh
 aws cloudformation create-stack --stack-name myteststack --template-body file://cfn-ec2.yaml

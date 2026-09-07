@@ -53,6 +53,10 @@ Parameters:
     Description: ADOT Collector Repository Name
     Type: String
     Default: aws-otel-collector
+  KeycloakRepositoryName:
+    Description: Keycloak Repository Name
+    Type: String
+    Default: keycloak-sample
 
 #Mappings: 
 
@@ -131,14 +135,23 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${StackPrefix}-ScheduleLaunchFluentBitECRRepository 
-  #ADOT Collector
+  #Repository for ADOT Collector
   AdotCollectorECRRepository:
     Type: AWS::ECR::Repository
     Properties:
       RepositoryName: !Ref AdotCollectorRepositoryName
       Tags:
         - Key: Name
-          Value: !Sub ${StackPrefix}-AdotCollectorRepository
+          Value: !Sub ${StackPrefix}-AdotCollectorECRRepository
+  #Repository for Keycloak
+  KeycloakECRRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Ref KeycloakRepositoryName
+      Tags:
+        - Key: Name
+          Value: !Sub ${StackPrefix}-KeycloakECRRepository
+
 Outputs:
   BffECRRepositoryArn:
     Description: Bff App Repository Arn
@@ -220,3 +233,11 @@ Outputs:
     Value: !GetAtt AdotCollectorECRRepository.RepositoryUri
     Export:
       Name: !Sub ${StackPrefix}-AdotCollectorECRRepositoryUri    
+  KeycloakECRRepositoryArn:
+    Description: Keycloak Repository Arn
+    Value: !GetAtt KeycloakECRRepository.Arn    
+  KeycloakECRRepositoryUri:
+    Description: Keycloak Repository URI
+    Value: !GetAtt KeycloakECRRepository.RepositoryUri
+    Export:
+      Name: !Sub ${StackPrefix}-KeycloakECRRepositoryUri
