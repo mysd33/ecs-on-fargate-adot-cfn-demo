@@ -36,14 +36,20 @@
     
         ![純バッチ処理イメージ](img/ecs-batch-jobflow.png)
 
-* ユーザ認証・認可（OIDC）
-    * OIDCプロバイダのOSS製品であるKeycloakを利用し、認可コードグラントによるユーザ認証（SSO）、バックチャネルログアウトにも対応したSLOの実装をしている。
-        * TODO:図
+* ユーザ認証・認可（OIDC）、API認可（OAuth2.0）
+    * OIDCプロバイダのOSS製品であるKeycloakを利用している。
+        * SSOによるユーザ認証が可能。認可コードグラントによるユーザ認証を実装している。
+        * SLOを実装し、バックチャネルログアウトに対応している。
+        * OIDCによるユーザ認証後、バックエンド（リソースサーバとの連携）において、OAuth2.0のアクセストークンによるAPI認可の実装をしている。
+            * アクセストークンの検証には、イントロスペクションエンドポイントに対応した例になっている。
 
-* API認可（OAuth2.0）
-    * OIDCによるユーザ認証後、バックエンド（リソースサーバとの連携）において、Keycloakを利用したOAuth2.0のアクセストークンによるAPI認可の実装をしている。
-        * アクセストークンの検証には、イントロスペクションエンドポイントにも対応した例になっている。
-        * TODO:図
+    * Keycloakは、ECSで可用性構成でデプロイされるようになっている。
+        * Keycloakでは、JGroupsを使ってクラスタ構成する各ノードのディスカバリを行う仕組みとなっている。
+        * デフォルト設定ではUDPを使う設定となっており、AWSでも利用可能なS3_PING方式で構成している。
+            * この他、DNS_PING方式もあるそうで、コンテナ環境ではDNS_PINGを利用するケースが多いとのこと。
+        * DBは、業務DBと同様に、Aurora Serverless v2 for Postgresを使用している。
+        
+        ![Keycloak構成図](img/keycloak.png)
 
 
 ### 1.3. StepFunctionsによるジョブフロー実行制御
@@ -511,7 +517,7 @@ docker tag keycloak-sample:latest %AWS_ACCOUNT_ID%.dkr.ecr.%AWS_REGION%.amazonaw
 docker push %AWS_ACCOUNT_ID%.dkr.ecr.%AWS_REGION%.amazonaws.com/keycloak-sample:latest
 ```
 
-### Keycloak用のDBの作成
+### 13.2. Keycloak用のDBの作成
 * BastionへSystem Manager Session Managerなどを使って接続
 * Aurora上にKeycloak用のDBを作成する場合の例
 ```sh
@@ -520,7 +526,7 @@ CREATE DATABASE keycloak;
 ```
 
 
-### Keycloak用のALB、ECSクラスタ、タスク定義、サービスの構築
+### 13.3. Keycloak用のALB、ECSクラスタ、タスク定義、サービスの構築
 * TODO: IAM、Security Groupなどの設定もCfnテンプレートに追加する
 * TODO: ALB、ECSクラスタ、タスク定義、サービスを作成するCfnテンプレートを作成する
 
@@ -529,11 +535,113 @@ aws cloudformation validate-template --template-body file://cfn-ecs-keycloak.yam
 aws cloudformation create-stack --stack-name ECS-KEYCLOAK-Stack --template-body file://cfn-ecs-keycloak.yaml
 ```
 
-### Keycloakの設定インポート（Dockefile内であらかじめ実行しておく？）
-
-
 * TODO: SecretsManagerにクライアントシークレットを追加し、それ以外のSpring Security OAuth2.0用の必要なパラメータをパラメータストア追加する
 * BFFとBackendのECSのタスク定義にプロファイルoidcを追加する
+
+
+### 13.4. Keycloakの設定
+!!! warning
+    設定ファイルからインポートできる手順を検討
+
+* Keycloakの管理コンソールにアクセスする。
+    * http://(<KeycloakのALBのDNS名>)
+    * 管理者のユーザ名、パスワードを設定する。
+        * ユーザ名: admin
+        * パスワード: admin
+
+* レルムを作成
+    * [Keycloak管理コンソール](http://(<KeycloakのALBのDNS名>))に管理者ユーザログイン
+    * 左のメニューの「Manage realms」をクリックし、「Create realm」をクリックして新しいレルムを作成する。
+        * Realm name: `demo`
+    * レルムがdemoに切り替わったら、左のメニューの「Realm settings」をクリックし、「Display name」を設定する。
+        * Display name: `サンプルシステム`
+* ユーザを作成
+    * 左のメニューの「Users」をクリックし、「Create new user」をクリックして新しいユーザを作成する。
+        * Username: `yamadatr`
+        * Email: `yamada@xxx.co.jp`
+        * First Name: `太郎`
+        * Last Name: `山田`
+    * Credentialsタブをクリックし、パスワードを設定する。
+        * Password: `password`
+        * Password Confirmation: `password`
+        * Temporary: OFF
+    * もう一度、「Create new user」をクリックして新しいユーザを作成する。
+        * Username: `tamuraichr`
+        * Email: `tamura@xxx.co.jp`
+        * First Name: `一郎`
+        * Last Name: `田村`
+    * Credentialsタブをクリックし、パスワードを設定する。
+        * Password: `password`
+        * Password Confirmation: `password`
+        * Temporary: OFF
+* グループの設定
+    * 左のメニューの「Groups」をクリックし、「Create group」をクリックして新しいグループを作成する。
+        * Group Name: `admin`
+    * もう一度、「Create group」をクリックして新しいグループを作成する。
+        * Group Name: `general`
+    * Membersタブをクリックし、「Add member」をクリックし、作成したユーザをグループに割り当てる。
+        * adminグループに、ユーザ`yamadatr`を割り当てる。
+        * generalグループに、ユーザ`tamuraichr`を割り当てる。
+* ロールの設定
+    * 左のメニューの「Realm roles」をクリックし、「Create Role」をクリックして新しいロールを作成する。
+        * Role Name: `ADMIN`
+    * もう一度、「Create Role」をクリックして新しいロールを作成する。
+        * Role Name: `GENERAL`
+    * グループにロールを割り当てる
+        * 左のメニューの「Groups」をクリックし、作成した`admin`グループをクリックする。
+        * 「Role Mappings」タブをクリックし、「Assign Roles」から「Realm Roles」を選択し、グループに`ADMIN`ロールを割り当てる。
+        * 同様に、作成した`general`グループにも`GENERAL`ロールを割り当てる。
+* BFFアプリケーションのクライアントを作成
+    * 左のメニューの「Clients」をクリックし、「Create client」をクリックして新しいクライアントを作成する。
+        * Client Type: `OpenID Connect`
+        * Client ID: `sample-bff-oidc`※任意の文字列でよい
+        * Name: `sample-bff`※任意の文字列でよい
+        * Client authentication: `On`
+        * Authentication flow: `Standard flow`にチェック
+        * Require PKCE: `On`
+        * Root URL: `http://(BFFのALBのDNS名)`
+        * Home URL: `http://(BFFのALBのDNS名)`
+        * Valid Redirect URIs: `http://(BFFのALBのDNS名)/login/oauth2/code/keycloak`
+            * Spring Security OAuth2.0 ClientのデフォルトのリダイレクトエンドポイントのURIは、
+                `/login/oauth2/code/{registrationId}`
+        * Valid post logout redirect URIs: `http://(BFFのALBのDNS名)/`
+    * 作成したクライアントの設定画面で、「Credentials」タブをクリックし、クライアントシークレットを確認する。
+* ログイン成功後の同意画面の表示を有効化
+    * 「Settings」タブの「Login Settings」セクションで以下の設定
+        * Consent Required: `On`
+* バックチャネルログアウトの設定
+    * 「Settings」タブの「Logout Settings」セクションで以下の設定
+        * Front channel logout: `Off`
+        * Backchannel Logout URL: `http://(BFFのALBのDNS名)/logout/connect/back-channel/keycloak`
+            * Spring Security OAuth2.0 ClientのデフォルトのバックチャネルログアウトエンドポイントのURIは、`/logout/connect/back-channel/{registrationId}`
+* IDトークンのクレームにロールを追加する設定
+    * 左のメニューで「Clients」をクリックし、`sample-bff-oidc`を選択
+    * 「Client scopes」タブで、「sample-bff-oidc-dedicated」を選択、「Configure a new mapper」で、「User Realm Role」を選択し、ロールをマッピングする。
+    * Name: `realm roles`
+    * Token Claim Name: `realm_access.roles`
+    * Add to ID token: `On`、Add to access token: `On`、Add to userinfo: `On`、Add to token introspection: `On`にチェックする。（デフォルトのまま）
+* Backendアプリケーションのクライアントを作成
+    * Introspection エンドポイントを利用して、アクセストークンの検証を行うため、Backendアプリケーションのクライアントを作成する。
+    * 左のメニューの「Clients」をクリックし、「Create client」をクリックして新しいクライアントを作成する。
+        * Client Type: `OpenID Connect`
+        * Client ID: `sample-backend-oidc`※任意の文字列でよい
+        * Name: `sample-backend`※任意の文字列でよい
+        * Client authentication: `On`
+        * Authentication flow: 全てチェックを外す
+* スコープの追加
+    * バックエンドのTodo APIへのアクセスを許可するためのスコープ`todo`を追加する。
+        * 左のメニューの「Client scopes」をクリックし、「Create client scope」をクリックして新しいクライアントスコープを作成する。
+            * Name: `todo`
+            * Include in token scope: `On`
+        * 左のメニューの「Clients」をクリックし、`sample-bff-oidc`を選択
+        * 「Client scopes」タブをクリックし、「Add client scope」をクリックして、作成したクライアントスコープ`todo`を、Assign type 「Optional」に追加する。
+    * Introspectionエンドポイントアクセス時のaudクレームの検証が通るように設定
+        * 左のメニューの「Client scopes」をクリックし、`todo`を選択
+        * 「Mappers」タブをクリックし、「Add mapper」をクリックして新しいマッパーを作成する。
+            * Name: `todo-audience`
+            * Mapper Type: `Audience`
+            * Included Client Audience: `sample-backend-oidc`
+            * Add to access token: `On`、Add to token introspection: `On`にチェックする。（デフォルトのまま）
 
 ## 14. パラメータストア環境構築
 ### 14.1. Systems Manager Parameter Storeの作成

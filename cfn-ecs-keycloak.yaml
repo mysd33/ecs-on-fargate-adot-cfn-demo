@@ -7,17 +7,273 @@ Parameters:
     Description: Stack Resource Name Prefix
     Type: String
     Default: Demo
+  EnvironmentType:
+    Description: The environment type
+    Type: String
+    AllowedValues: ["Dev", "Staging", "Production"]
+    Default: Production
+  S3PingBucketName:
+    Description: S3 Bucket Name
+    Type: String
+    Default: mysd33bucket123ping
+  KeycloakAdminUsername:
+    Description: Keycloak admin username
+    Type: String
+    Default: admin
+  KeycloakAdminPassword:
+    Description: Keycloak admin password
+    Type: String
+    Default: admin
+  KeycloakDBEngine:
+    Description: Keycloak database engine
+    Type: String
+    Default: postgres
+  KeycloakJDBCDriver:
+    Description: Keycloak JDBC driver
+    Type: String
+    # Amazon Web Services JDBC Driver
+    Default: software.amazon.jdbc.Driver
+  KeycloakJDBCScheme:
+    Description: Keycloak JDBC scheme
+    Type: String
+    Default: jdbc:aws-wrapper:postgresql
+  KeycloakDBName:
+    Description: Keycloak database name
+    Type: String
+    Default: keycloak
+  KeycloakHttpEnabled:
+    Description: Enable HTTP for Keycloak
+    Type: String
+    AllowedValues: ["true", "false"]
+    Default: "true"
+  KeycloakHostnameStrict:
+    Description: Enable strict hostname verification for Keycloak
+    Type: String
+    AllowedValues: ["true", "false"]
+    Default: "false"
  
-#Mappings: 
+Mappings: 
+  KeycloakTaskDefinitionMap:
+    Production:
+      "Memory" : 2048
+      "Cpu" : 1024
+      "ContainerName" : "ecsdemo-keycloak"
+      "ContainerImage" : "keycloak-sample:latest"
+      "HealthCheck" : "curl -f http://localhost:9000/health || exit 1"
+  KeycloakServiceMap:
+    Production:
+      "DesiredCount": 2
+      "HealthCheckGracePeriodSeconds": 60
+      "RollingUpdateMinimumHealthyPercent": 0
+
 
 #Conditions: 
 
 Resources: 
-# ALB
-# ALB Target Group
-# ALB Listener
-# ECS Cluster
-# ECS Task Definition
-# ECS Service
+# S3 for S3_PING
+  S3PingBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref S3PingBucketName
+      Tags:
+        - Key: Name
+          Value: !Sub Bucket-${S3PingBucketName}
+# ALB for Keycloak
+  # Public ALB
+  PublicALBForKeycloak:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:      
+      Name: !Sub ${StackPrefix}-PublicALBForKeycloak
+      Subnets: 
+        - Fn::ImportValue: !Sub ${StackPrefix}-PublicSubnetOneId
+        - Fn::ImportValue: !Sub ${StackPrefix}-PublicSubnetTwoId
+      SecurityGroups: 
+        - Fn::ImportValue: !Sub ${StackPrefix}-PublicALBSecurityGroup-ID
+      Tags:
+        - Key: Name
+          Value: !Sub ${StackPrefix}-PublicALBForKeycloak
+  # Public ALB Target Group
+  PublicALBForKeycloakDefaultTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub ${StackPrefix}-PubKeycloakDfTg
+      TargetType: ip
+      VpcId: 
+        Fn::ImportValue: !Sub ${StackPrefix}-VPC-ID
+      Port: 80
+      Protocol: HTTP
+      HealthCheckPort: 9000
+      HealthCheckPath: /health
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      Tags:
+        - Key: Name
+          Value: !Sub ${StackPrefix}-PubALBForKeycloakDfTg
+  # Public ALB Listener
+  PublicALBForKCListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties: 
+      LoadBalancerArn: !Ref PublicALBForKeycloak
+      Port: 80
+      Protocol: HTTP
+      DefaultActions: 
+        - Type: forward
+          TargetGroupArn: !Ref PublicALBForKeycloakDefaultTargetGroup
+# ECS Cluster for Keycloak
+  KeycloakECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub ${StackPrefix}-Keycloak-Cluster
+      ClusterSettings:
+        - Name: containerInsights
+          Value: enabled
+      Tags:
+        - Key: Name
+          Value: !Sub ${StackPrefix}-Keycloak-Cluster
 
-#Outputs:
+# Log Group
+  KeycloakECSLogGroup:
+    Type: "AWS::Logs::LogGroup"
+    Properties:
+      LogGroupName: !Sub "/ecs/logs/${StackPrefix}-keycloak-ecs-group"
+      Tags:
+        - Key: Name
+          Value: !Sub ${StackPrefix}-KeycloakECSLogGroup
+
+# ECS Task Definition
+  KeycloakECSTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub ${StackPrefix}-Keycloak-Task
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Memory: !FindInMap [KeycloakTaskDefinitionMap, !Ref EnvironmentType, Memory]
+      Cpu: !FindInMap [KeycloakTaskDefinitionMap, !Ref EnvironmentType, Cpu]
+      ExecutionRoleArn:
+        Fn::ImportValue: !Sub ${StackPrefix}-ECSTaskExecutionRole-Arn
+      TaskRoleArn:
+        Fn::ImportValue: !Sub ${StackPrefix}-KeycloakECSTaskRole-Arn
+      ContainerDefinitions:
+        - Name: !FindInMap [KeycloakServiceMap, !Ref EnvironmentType, ContainerName]
+          Image: 
+            Fn::Join:
+              - ""
+              - - !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/
+                - !FindInMap [KeycloakTaskDefinitionMap, !Ref EnvironmentType, ContainerImage]
+          Command:
+            - 'start'
+            - '--optimized'
+          PortMappings:
+            - ContainerPort: !FindInMap [KeycloakServiceMap, !Ref EnvironmentType, ContainerPort]
+          HealthCheck:
+            Command:
+              - CMD-SHELL
+              - !FindInMap [KeycloakTaskDefinitionMap, !Ref EnvironmentType, HealthCheck]
+            Interval: 90
+            StartPeriod: 60
+          Environment:
+            # Keycloak Admin Account
+            - Name: KEYCLOAK_ADMIN
+              Value: !Ref KeycloakAdminUsername
+            - Name: KEYCLOAK_ADMIN_PASSWORD
+              Value: !Ref KeycloakAdminPassword
+            # Keycloak Database Configuration
+            - Name: KC_DB
+              Value: !Ref KeycloakDBEngine
+            - Name: KC_DB_DRIVER
+              Value: !Ref KeycloakJDBCDriver
+            - Name: KC_DB_URL
+              Value:
+                Fn::Join: 
+                  - ""
+                  - - !Sub "${KeycloakJDBCScheme}://"
+                    - Fn::ImportValue: !Sub ${StackPrefix}-RDSClusterEndpointAddress
+                    - ":"
+                    - Fn::ImportValue: !Sub ${StackPrefix}-RDSClusterEndpointPort
+                    - "/"
+                    - Fn::ImportValue: !Ref KeycloakDBName
+            - Name: KC_DB_USERNAME
+              Value:
+                Fn::Join:
+                  - ""
+                  - - "{{resolve:secretsmanager:"
+                    - Fn::ImportValue: !Sub ${StackPrefix}-RDSSecretsManagerName
+                    - ":SecretString:username}}"
+            - Name: KC_DB_PASSWORD
+              Value:
+                Fn::Join:
+                  - ""
+                  - - "{{resolve:secretsmanager:"
+                    - Fn::ImportValue: !Sub ${StackPrefix}-RDSSecretsManagerName
+                    - ":SecretString:password}}"
+            # Keycloak Health Check Enabled
+            - Name: KC_HEALTH_ENABLED
+              Value: 'true'
+            # HTTP Enabled
+            - Name: KC_HTTP_ENABLED
+              Value: !Ref KeycloakHttpEnabled
+            # Keycloak Hostname
+            - Name: KC_HOSTNAME
+              Value : !GetAtt  PublicALBForKeycloak.DNSName
+            - Name: KC_HOSTNAME_ADMIN
+              Value : !GetAtt  PublicALBForKeycloak.DNSName
+            # Hostname Verification disabled
+            - Name: KC_HOSTNAME_STRICT
+              Value: !Ref KeycloakHostnameStrict
+            # Cache Provider(Infinispan)
+            - Name: KC_CACHE
+              Value: 'ispn'
+            # Infinispan Cache Stack
+            - Name: KC_CACHE_STACK
+              Value: 'ec2'
+            # using S3_PING
+            - Name: JAVA_OPTS_APPEND
+              Value: !Sub '-Djgroups.s3.region_name=${AWS::Region} -Djgroups.s3.bucket_name=${S3PingBucket}'
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref KeycloakECSLogGroup
+              awslogs-region: !Ref "AWS::Region"
+              awslogs-stream-prefix: keycloak
+
+# ECS Service for Keycloak
+  KeycloakECSService:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: !Sub ${StackPrefix}-KeycloakService
+      Cluster: !Ref KeycloakECSCluster
+      DesiredCount: !FindInMap [KeycloakServiceMap, !Ref EnvironmentType, DesiredCount]
+      # TODO: adjust parameter
+      HealthCheckGracePeriodSeconds: !FindInMap [KeycloakServiceMap, !Ref EnvironmentType, HealthCheckGracePeriodSeconds]
+      TaskDefinition: !Ref KeycloakECSTaskDefinition
+      LaunchType: FARGATE
+      LoadBalancers:
+        - ContainerName: !FindInMap [KeycloakTaskDefinitionMap, !Ref EnvironmentType, ContainerName]
+          ContainerPort: !FindInMap [KeycloakTaskDefinitionMap, !Ref EnvironmentType, ContainerPort]
+          TargetGroupArn: !Ref PublicALBForKeycloakDefaultTargetGroup
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          Subnets:
+            - Fn::ImportValue: !Sub ${StackPrefix}-PrivateSubnetOneId
+            - Fn::ImportValue: !Sub ${StackPrefix}-PrivateSubnetTwoId
+          SecurityGroups:
+            - Fn::ImportValue: !Sub ${StackPrefix}-PublicALBSecurityGroup-ID
+      # Rolling update
+      DeploymentController:
+        Type: ECS
+      DeploymentConfiguration:
+        DeploymentCircuitBreaker:
+          Enable: true
+          Rollback: true
+        MinimumHealthyPercent: !FindInMap [KeycloakServiceMap, !Ref EnvironmentType, RollingUpdateMinimumHealthyPercent]
+      Tags:
+        - Key: Name
+          Value: !Sub ${StackPrefix}-KeycloakService
+Outputs:
+  S3PingBucketName:
+    Description: S3 Bucket Name
+    Value: !Ref S3PingBucket
+    Export:
+      Name: !Sub ${StackPrefix}-S3PingBucketName

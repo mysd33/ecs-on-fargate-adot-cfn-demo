@@ -74,7 +74,7 @@ Resources:
           - Fn::ImportValue: !Sub ${StackPrefix}-PrivateSubnetOneId
           - Fn::ImportValue: !Sub ${StackPrefix}-PrivateSubnetTwoId          
         SecurityGroupIds:          
-          - Fn::ImportValue: !Sub ${StackPrefix}-PrivateECSSecurityGroup-ID
+          - Fn::ImportValue: !Sub ${StackPrefix}-BatchECSSecurityGroup-ID
       ServiceRole: 
         Fn::ImportValue: !Sub ${StackPrefix}-AWSBatchServiceRole-Arn
       Tags: {"Name": !Sub "${StackPrefix}-BatchComputeEnvironment"}

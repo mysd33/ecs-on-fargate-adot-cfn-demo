@@ -177,7 +177,22 @@ Resources:
         - Key: Name
           Value: !Sub ${StackPrefix}-ScheduleLaunchECSTaskRole
 
-  #IAM Role for Batch Jobflow Job Role
+  #IAM Role for Keycloak ECS Task
+  KeycloakECSTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+      Tags:
+        - Key: Name
+          Value: !Sub ${StackPrefix}-KeycloakECSTaskRole
+
+  #IAM Role for Batch Jobflow AWS Batch Job
   BatchJobflowJobRole:
     Type: AWS::IAM::Role
     Properties:
@@ -232,6 +247,7 @@ Resources:
       - !Ref BatchECSTaskRole        
       - !Ref ScheduleLaunchECSTaskRole
       - !Ref BatchJobflowJobRole
+      - !Ref KeycloakECSTaskRole
 
   #IAM Policy for CloudWatch Metrics Access
   CloudWatchMetricsPolicy:
@@ -269,9 +285,11 @@ Resources:
       Roles:
       - !Ref FrontendECSTaskRole
       - !Ref BackendECSTaskRole
-      - !Ref BatchECSTaskRole        
+      - !Ref BatchECSTaskRole
       - !Ref ScheduleLaunchECSTaskRole
       - !Ref BatchJobflowJobRole
+      - !Ref KeycloakECSTaskRole
+
   #IAM Policy for SQS Access
   SQSAccessPolicy:
     Type: AWS::IAM::Policy
@@ -306,7 +324,7 @@ Resources:
           Resource: !Sub arn:${AWS::Partition}:states:${AWS::Region}:${AWS::AccountId}:stateMachine:*
       PolicyName: !Sub ${StackPrefix}-StepFunctionsTaskPolicy
       Roles:
-      - !Ref BatchJobflowJobRole      
+      - !Ref BatchJobflowJobRole
 
   #IAM Policy for DynamoDB Access
   DynamoDBAccessPolicy:
@@ -366,6 +384,7 @@ Resources:
       - !Ref BackendECSTaskRole
       - !Ref BatchECSTaskRole
       - !Ref BatchJobflowJobRole
+      - !Ref KeycloakECSTaskRole
 
   #IAM Policy for Systems Manager Parameter Store Access
   SSMParameterStoreAccessPolicy:
@@ -386,6 +405,7 @@ Resources:
       - !Ref BatchECSTaskRole
       - !Ref ScheduleLaunchECSTaskRole
       - !Ref BatchJobflowJobRole
+      - !Ref KeycloakECSTaskRole
 
   #IAM Role for ECS Task Execution and AWS Batch Execution
   ECSTaskExecutionRole:
@@ -726,6 +746,11 @@ Outputs:
     Value: !GetAtt ScheduleLaunchECSTaskRole.Arn
     Export: 
       Name: !Sub ${StackPrefix}-ScheduleLaunchECSTaskRole-Arn
+  KeycloakECSTaskRoleArn:
+    Description: KeycloakECSTaskRole Arn
+    Value: !GetAtt KeycloakECSTaskRole.Arn
+    Export: 
+      Name: !Sub ${StackPrefix}-KeycloakECSTaskRole-Arn
   BatchJobflowJobRoleArn:
     Description: BatchJobflowJobRole Arn
     Value: !GetAtt BatchJobflowJobRole.Arn

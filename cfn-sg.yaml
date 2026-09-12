@@ -75,6 +75,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${StackPrefix}-PubALB-SG
+
   #Security Group of Private ALB for Backend
   PrivateALBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -99,7 +100,7 @@ Resources:
         - Key: Name
           Value: !Sub ${StackPrefix}-PrivALB-SG          
   
-  #Security Group of Public ECS Cluster for BFF
+  #Security Group of Public ECS for BFF and Keycloak
   PublicECSSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -116,7 +117,7 @@ Resources:
         - Key: Name
           Value: !Sub ${StackPrefix}-PubECS-SG  
   
-  #Security Group of Private ECS Cluster for Backend
+  #Security Group of Private ECS for Backend
   PrivateECSSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -132,6 +133,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${StackPrefix}-PrivECS-SG  
+  
+  #Security Group of Private ECS/AWSBatch for Batch 
   BatchECSSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -140,7 +143,8 @@ Resources:
         Fn::ImportValue: !Sub ${StackPrefix}-VPC-ID
       Tags:
         - Key: Name
-          Value: !Sub ${StackPrefix}-BatchECS-SG          
+          Value: !Sub ${StackPrefix}-BatchECS-SG
+
   # Security Group of ElastiCache
   ECacheSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -161,7 +165,8 @@ Resources:
           Description: Ingress from the Bastion        
       Tags:
         - Key: Name
-          Value: !Sub ${StackPrefix}-ECache-SG 
+          Value: !Sub ${StackPrefix}-ECache-SG
+
   # Security Group of RDS Aurora
   AuroraSecurityGroup:
     Type: AWS::EC2::SecurityGroup
