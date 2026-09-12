@@ -275,5 +275,9 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${StackPrefix}-KeycloakService
-#Outputs:
-
+Outputs:
+  PublicALBForKeycloakDNSName:
+    Description: "Public ALB DNS Name for Keycloak"
+    Value: !GetAtt PublicALBForKeycloak.DNSName
+    Export: 
+      Name: !Sub ${StackPrefix}-PubALBForKeycloak-DNS

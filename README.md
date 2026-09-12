@@ -654,12 +654,28 @@ aws cloudformation create-stack --stack-name ECS-KEYCLOAK-Stack --template-body 
             * Included Client Audience: `sample-backend-oidc`
             * Add to access token: `On`、Add to token introspection: `On`にチェックする。（デフォルトのまま）
 
-> [!WARNING]
-> TODO: SecretsManagerにクライアントシークレットを追加し、それ以外のSpring Security OAuth2.0用の必要なパラメータをパラメータストア追加する  
-> TODO: BFFとBackendのECSのタスク定義にプロファイルoidcを追加する
+### 13.5. Secrets Manager環境構築
+* Keycloak、GitHub、GoogleのクライアントシークレットをSecrets Managerに追加する
+
+```sh
+# Keycloak, GitHub, GoogleのクライアントIDとシークレットを設定
+set KEYCLOAK_RP_CLIENT_ID=XXXX
+set KEYCLOAK_RP_CLIENT_SECRET=XXXX
+set KEYCLOAK_RS_CLIENT_ID=XXXX
+set KEYCLOAK_RS_CLIENT_SECRET=XXXX
+set GITHUB_CLIENT_ID=XXXX
+set GITHUB_CLIENT_SECRET=XXXX
+set GOOGLE_CLIENT_ID=XXXX
+set GOOGLE_CLIENT_SECRET=XXXX
+
+aws cloudformation validate-template --template-body file://cfn-secrets-oidc.yaml
+aws cloudformation create-stack --stack-name ECS-SECRETS-OIDC-Stack --template-body file://cfn-secrets-oidc.yaml ^
+--parameters ParameterKey=KeycloakRPClientId,ParameterValue=%KEYCLOAK_RP_CLIENT_ID% ParameterKey=KeycloakRPClientSecret,ParameterValue=%KEYCLOAK_RP_CLIENT_SECRET% ParameterKey=KeycloakRSClientId,ParameterValue=%KEYCLOAK_RS_CLIENT_ID% ParameterKey=KeycloakRSClientSecret,ParameterValue=%KEYCLOAK_RS_CLIENT_SECRET% ParameterKey=GitHubClientId,ParameterValue=%GITHUB_CLIENT_ID% ParameterKey=GitHubClientSecret,ParameterValue=%GITHUB_CLIENT_SECRET% ParameterKey=GoogleClientId,ParameterValue=%GOOGLE_CLIENT_ID% ParameterKey=GoogleClientSecret,ParameterValue=%GOOGLE_CLIENT_SECRET%
+```
 
 ## 14. パラメータストア環境構築
 ### 14.1. Systems Manager Parameter Storeの作成
+
 ```sh
 aws cloudformation validate-template --template-body file://cfn-ssm-param.yaml
 aws cloudformation create-stack --stack-name ECS-SSM-PARAM-Stack --template-body file://cfn-ssm-param.yaml

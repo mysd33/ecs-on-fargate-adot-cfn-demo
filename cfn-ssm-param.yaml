@@ -204,6 +204,17 @@ Resources:
       Name: !Sub /config/${ProjectName}/${EnvName}/sample-bff/example.datasource.dynamic-routing.enabled
       Type: String
       Value: true
+  SampleBffKeycloakIssuerUriParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /config/${ProjectName}/${EnvName}/sample-bff/spring.security.oauth2.client.provider.keycloak.issuer-uri
+      Type: String
+      Value:
+        Fn::Join: 
+          - ""
+          - - "http://"
+            - Fn::ImportValue: !Sub ${StackPrefix}-PubALBForKeycloak-DNS
+
   # sample-backend
   SampleBackendDatasourceDynamicRoutingParameter:
     Type: AWS::SSM::Parameter
@@ -211,6 +222,27 @@ Resources:
       Name: !Sub /config/${ProjectName}/${EnvName}/sample-backend/example.datasource.dynamic-routing.enabled
       Type: String
       Value: true
+  SampleBackendKeycloakIssuerUriParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /config/${ProjectName}/${EnvName}/sample-backend/spring.security.oauth2.resourceserver.jwt.issuer-uri
+      Type: String
+      Value:
+        Fn::Join: 
+          - ""
+          - - "http://"
+            - Fn::ImportValue: !Sub ${StackPrefix}-PubALBForKeycloak-DNS
+  SampleBackendOpaqueTokenIntrospectionUriParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /config/${ProjectName}/${EnvName}/sample-backend/spring.security.oauth2.resourceserver.opaquetoken.introspection-uri
+      Type: String
+      Value:
+        Fn::Join: 
+          - ""
+          - - "http://"
+            - Fn::ImportValue: !Sub ${StackPrefix}-PubALBForKeycloak-DNS
+            - "/realms/demo/protocol/openid-connect/token/introspect"
 
   # sample-batch
   SampleBatchSqsListenerQueueNameParameter:

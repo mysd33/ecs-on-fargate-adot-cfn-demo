@@ -25,7 +25,7 @@ Mappings:
       "ContainerName" : "ecsdemo-frontend-app"
       "ContainerImage" : "sample-bff:latest"
       "ContainerPort" : 8080
-      "Profile" : "production,log_container,adot"
+      "Profile" : "production,log_container,adot,oidc"
       "HealthCheck" : "curl -f http://localhost:8080/actuator/health || exit 1"      
     Staging:
       "Memory" : 2048
@@ -33,7 +33,7 @@ Mappings:
       "ContainerName" : "ecsdemo-frontend-app"
       "ContainerImage" : "sample-bff:latest"
       "ContainerPort" : 8080
-      "Profile" : "staging,log_container,adot"
+      "Profile" : "staging,log_container,adot,oidc"
       "HealthCheck" : "curl -f http://localhost:8080/actuator/health || exit 1"            
     Dev:
       "Memory" : 2048
@@ -41,7 +41,7 @@ Mappings:
       "ContainerName" : "ecsdemo-frontend-app"
       "ContainerImage" : "sample-bff:latest"
       "ContainerPort" : 8080
-      "Profile" : "dev,log_container,adot"
+      "Profile" : "dev,log_container,adot,oidc"
       "HealthCheck" : "curl -f http://localhost:8080/actuator/health || exit 1"            
   BackendServiceTaskDefinitionMap:
     Production:
@@ -50,7 +50,7 @@ Mappings:
       "ContainerName" : "ecsdemo-backend-service"
       "ContainerImage" : "sample-backend:latest"
       "ContainerPort" : 8080
-      "Profile" : "production,log_container"
+      "Profile" : "production,log_container,oidc"
       "HealthCheck" : "curl -f http://localhost:8080/actuator/health || exit 1"            
     Staging:
       "Memory" : 2048
@@ -58,7 +58,7 @@ Mappings:
       "ContainerName" : "ecsdemo-backend-service"
       "ContainerImage" : "sample-backend:latest"
       "ContainerPort" : 8080
-      "Profile" : "staging,log_container"
+      "Profile" : "staging,log_container,oidc"
       "HealthCheck" : "curl -f http://localhost:8080/actuator/health || exit 1"            
     Dev:
       "Memory" : 2048
@@ -66,7 +66,7 @@ Mappings:
       "ContainerName" : "ecsdemo-backend-service"
       "ContainerImage" : "sample-backend:latest"
       "ContainerPort" : 8080
-      "Profile" : "dev,log_container"
+      "Profile" : "dev,log_container,oidc"
       "HealthCheck" : "curl -f http://localhost:8080/actuator/health || exit 1"            
   BatchAppTaskDefinitionMap:
     Production:
@@ -200,6 +200,15 @@ Resources:
             - Name: BASIC_AUTH_SECRETS_NAME
               Value:
                 Fn::ImportValue: !Sub ${StackPrefix}-BasicAuthSecretsManagerName
+            - Name: KEYCLOAK_SECRETS_NAME
+              Value:
+                Fn::ImportValue: !Sub ${StackPrefix}-KeycloakRPSecretsManagerName
+            - Name: GITHUB_SECRETS_NAME
+              Value:
+                Fn::ImportValue: !Sub ${StackPrefix}-GitHubSecretsManagerName
+            - Name: GOOGLE_SECRETS_NAME
+              Value:
+                Fn::ImportValue: !Sub ${StackPrefix}-GoogleSecretsManagerName
             - Name: LOGGING_LEVEL_IO_AWSPRING_CLOUD_SECRETSMANAGER
               Value: DEBUG
             # ADOT Environment Variables
@@ -296,6 +305,9 @@ Resources:
             - Name: BASIC_AUTH_SECRETS_NAME
               Value:
                 Fn::ImportValue: !Sub ${StackPrefix}-BasicAuthSecretsManagerName
+            - Name: KEYCLOAK_SECRETS_NAME
+              Value:
+                Fn::ImportValue: !Sub ${StackPrefix}-KeycloakRSSecretsManagerName
             - Name: LOGGING_LEVEL_IO_AWSPRING_CLOUD_SECRETSMANAGER
               Value: DEBUG
             # ADOT Environment Variables
