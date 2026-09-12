@@ -351,6 +351,10 @@ aws cloudformation validate-template --template-body file://cfn-vpe.yaml
 aws cloudformation create-stack --stack-name ECS-VPE-Stack --template-body file://cfn-vpe.yaml
 ```
 ### 5.4. （作成任意）NAT Gatewayの作成とプライベートサブネットのルートテーブル更新
+
+> [!WARNING]
+> Keycloakを利用する場合は、NAT Gatewayの作成が必要になりそう
+
 * 本手順では、ECRのイメージ転送量等にかかるNAT Gatewayのコスト節約から、全てVPC Endpointで作成するので、NAT Gatewayは通常不要。
     * とはいえ、全部VPC Endpointにすると、エンドポイント数分、デモ程度で何度も起動したり落としたりで1時間未満でも時間単位課金でコストがかえって結構かかる場合もある。その場合の調整として、本手順のVPC Endpoint作成対象を減らす等カスタマイズして、VPC Endpoint未作成のリソースアクセスに使用するために以下を追加実行すればよい。
 
@@ -395,6 +399,8 @@ aws secretsmanager get-secret-value --secret-id /secrets/database-secrets
     * 作成にしばらく時間がかかる。（20分程度）
     * 最小0ACUで、[自動一時停止機能](https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/aurora-serverless-v2-auto-pause.html)を有効化にすることでコストを抑えるようにしている。
 
+* Keycloackが対応しているAurora PostgreSQLのバージョンは17.xまでのため、postgresql17をインストールするようにしている
+
 ```sh
 aws cloudformation validate-template --template-body file://cfn-rds-aurora.yaml
 aws cloudformation create-stack --stack-name ECS-Aurora-Stack --template-body file://cfn-rds-aurora.yaml
@@ -414,7 +420,7 @@ aws cloudformation validate-template --template-body file://cfn-dynamodb.yaml
 aws cloudformation create-stack --stack-name ECS-DYNAMODB-Stack --template-body file://cfn-dynamodb.yaml
 ```
 
-## 11. ロードバランサ環境構築
+## 11. AP用のロードバランサ環境構築
 ### 11.1. ALBの作成
 * ECSの前方で動作するALBとデフォルトのTarget Group等を作成
     * （ローリングアップデートの場合）パラメータTargateGroupAttributesに「deregistration_delay.timeout_seconds」を「60」で設定し、ローリングアップデートの時間を短縮する工夫している。
@@ -461,7 +467,12 @@ aws cloudformation create-stack --stack-name ECS-TG-BG-Stack --template-body fil
 ```sh
 sudo dnf update -y
 
-sudo dnf install postgresql18 -y
+# Keycloackが対応しているAurora PostgreSQLのバージョンは17.xまでのため、postgresql17をインストール
+sudo dnf install postgresql17 -y
+
+# 最新だと18まで対応しているので、Keycloakを使わないならcfn-rds-aurora.yamlの設定でpostgresql18を使用し、以下の通り18をインストールしてもよい
+#sudo dnf install postgresql18 -y
+
 
 #DBに接続    
 psql -h (Auroraのクラスタエンドポイント) -U postgres -d testdb    
@@ -515,33 +526,33 @@ cd keycloak
 docker build -t keycloak-sample .
 docker tag keycloak-sample:latest %AWS_ACCOUNT_ID%.dkr.ecr.%AWS_REGION%.amazonaws.com/keycloak-sample:latest
 docker push %AWS_ACCOUNT_ID%.dkr.ecr.%AWS_REGION%.amazonaws.com/keycloak-sample:latest
+cd ..
 ```
 
 ### 13.2. Keycloak用のDBの作成
 * BastionへSystem Manager Session Managerなどを使って接続
 * Aurora上にKeycloak用のDBを作成する場合の例
+
 ```sh
 psql -h (Auroraのクラスタエンドポイント) -U postgres -d testdb
+# CloudFormationの「ECS-Aurora-Stack」スタックの出力「RDSClusterEndpointAddress」の値を参照
+# パスワードは、SecretsManagerの「Demo-SM-Secrets」の「password」の値を参照し入力
+
+# Keycloak用のDBを作成
 CREATE DATABASE keycloak;
 ```
 
 
 ### 13.3. Keycloak用のALB、ECSクラスタ、タスク定義、サービスの構築
-* TODO: IAM、Security Groupなどの設定もCfnテンプレートに追加する
-* TODO: ALB、ECSクラスタ、タスク定義、サービスを作成するCfnテンプレートを作成する
 
 ```sh
 aws cloudformation validate-template --template-body file://cfn-ecs-keycloak.yaml
 aws cloudformation create-stack --stack-name ECS-KEYCLOAK-Stack --template-body file://cfn-ecs-keycloak.yaml
 ```
 
-* TODO: SecretsManagerにクライアントシークレットを追加し、それ以外のSpring Security OAuth2.0用の必要なパラメータをパラメータストア追加する
-* BFFとBackendのECSのタスク定義にプロファイルoidcを追加する
-
-
 ### 13.4. Keycloakの設定
-!!! warning
-    設定ファイルからインポートできる手順を検討
+> [!WARNING]
+> 設定ファイルからインポートできる手順を検討
 
 * Keycloakの管理コンソールにアクセスする。
     * http://(<KeycloakのALBのDNS名>)
@@ -642,6 +653,10 @@ aws cloudformation create-stack --stack-name ECS-KEYCLOAK-Stack --template-body 
             * Mapper Type: `Audience`
             * Included Client Audience: `sample-backend-oidc`
             * Add to access token: `On`、Add to token introspection: `On`にチェックする。（デフォルトのまま）
+
+> [!WARNING]
+> TODO: SecretsManagerにクライアントシークレットを追加し、それ以外のSpring Security OAuth2.0用の必要なパラメータをパラメータストア追加する  
+> TODO: BFFとBackendのECSのタスク定義にプロファイルoidcを追加する
 
 ## 14. パラメータストア環境構築
 ### 14.1. Systems Manager Parameter Storeの作成

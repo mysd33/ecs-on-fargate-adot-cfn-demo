@@ -14,11 +14,15 @@ Parameters:
   DBEngineVersion:
     Description: Version number of the database engine
     Type: String
-    Default: 18.4
+  #  Default: 18.4
+    Default: 17.10
+    # Keycloak supported Amazon Aurora PostgreSQL version is upto 17.x
+    # https://www.keycloak.org/server/supported-configurations#_supported_databases
   DBEngineFamily:
     Description: Family of the database engine
     Type: String
-    Default: aurora-postgresql18
+  #  Default: aurora-postgresql18
+    Default: aurora-postgresql17
   #DBInstanceClassName:
   #  Description: DB Instance Class
   #  Type: String

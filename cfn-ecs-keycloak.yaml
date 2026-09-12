@@ -59,6 +59,8 @@ Mappings:
       "Cpu" : 1024
       "ContainerName" : "ecsdemo-keycloak"
       "ContainerImage" : "keycloak-sample:latest"
+      "ContainerPort" : 8080
+      "HealthCheckContainerPort" : 9000
       "HealthCheck" : "curl -f http://localhost:9000/health || exit 1"
   KeycloakServiceMap:
     Production:
@@ -110,7 +112,7 @@ Resources:
         - Key: Name
           Value: !Sub ${StackPrefix}-PubALBForKeycloakDfTg
   # Public ALB Listener
-  PublicALBForKCListener:
+  PublicALBForKeycloakListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties: 
       LoadBalancerArn: !Ref PublicALBForKeycloak
@@ -155,7 +157,7 @@ Resources:
       TaskRoleArn:
         Fn::ImportValue: !Sub ${StackPrefix}-KeycloakECSTaskRole-Arn
       ContainerDefinitions:
-        - Name: !FindInMap [KeycloakServiceMap, !Ref EnvironmentType, ContainerName]
+        - Name: !FindInMap [KeycloakTaskDefinitionMap, !Ref EnvironmentType, ContainerName]
           Image: 
             Fn::Join:
               - ""
@@ -165,7 +167,8 @@ Resources:
             - 'start'
             - '--optimized'
           PortMappings:
-            - ContainerPort: !FindInMap [KeycloakServiceMap, !Ref EnvironmentType, ContainerPort]
+            - ContainerPort: !FindInMap [KeycloakTaskDefinitionMap, !Ref EnvironmentType, ContainerPort]
+            - ContainerPort: !FindInMap [KeycloakTaskDefinitionMap, !Ref EnvironmentType, HealthCheckContainerPort]
           HealthCheck:
             Command:
               - CMD-SHELL
@@ -173,6 +176,8 @@ Resources:
             Interval: 90
             StartPeriod: 60
           Environment:
+            # Keycloak Configuration
+            # https://www.keycloak.org/server/all-config#category-config?q=hostname
             # Keycloak Admin Account
             - Name: KEYCLOAK_ADMIN
               Value: !Ref KeycloakAdminUsername
@@ -183,30 +188,6 @@ Resources:
               Value: !Ref KeycloakDBEngine
             - Name: KC_DB_DRIVER
               Value: !Ref KeycloakJDBCDriver
-            - Name: KC_DB_URL
-              Value:
-                Fn::Join: 
-                  - ""
-                  - - !Sub "${KeycloakJDBCScheme}://"
-                    - Fn::ImportValue: !Sub ${StackPrefix}-RDSClusterEndpointAddress
-                    - ":"
-                    - Fn::ImportValue: !Sub ${StackPrefix}-RDSClusterEndpointPort
-                    - "/"
-                    - Fn::ImportValue: !Ref KeycloakDBName
-            - Name: KC_DB_USERNAME
-              Value:
-                Fn::Join:
-                  - ""
-                  - - "{{resolve:secretsmanager:"
-                    - Fn::ImportValue: !Sub ${StackPrefix}-RDSSecretsManagerName
-                    - ":SecretString:username}}"
-            - Name: KC_DB_PASSWORD
-              Value:
-                Fn::Join:
-                  - ""
-                  - - "{{resolve:secretsmanager:"
-                    - Fn::ImportValue: !Sub ${StackPrefix}-RDSSecretsManagerName
-                    - ":SecretString:password}}"
             # Keycloak Health Check Enabled
             - Name: KC_HEALTH_ENABLED
               Value: 'true'
@@ -230,6 +211,29 @@ Resources:
             # using S3_PING
             - Name: JAVA_OPTS_APPEND
               Value: !Sub '-Djgroups.s3.region_name=${AWS::Region} -Djgroups.s3.bucket_name=${S3PingBucket}'
+            - Name: KC_DB_URL
+              Value:
+                Fn::Join: 
+                  - ""
+                  - - !Sub "${KeycloakJDBCScheme}://"
+                    - Fn::ImportValue: !Sub ${StackPrefix}-RDSClusterEndpointAddress
+                    - ":"
+                    - Fn::ImportValue: !Sub ${StackPrefix}-RDSClusterEndpointPort
+                    - "/"
+                    - Fn::ImportValue: !Ref KeycloakDBName
+          Secrets:
+            - Name: KC_DB_USERNAME
+              ValueFrom:
+                Fn::Sub:
+                  - "${SecretArn}:username::"
+                  - SecretArn:
+                      Fn::ImportValue: !Sub ${StackPrefix}-RDSSecretsManagerArn
+            - Name: KC_DB_PASSWORD
+              ValueFrom:
+                Fn::Sub:
+                  - "${SecretArn}:password::"
+                  - SecretArn:
+                      Fn::ImportValue: !Sub ${StackPrefix}-RDSSecretsManagerArn
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -271,9 +275,5 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${StackPrefix}-KeycloakService
-Outputs:
-  S3PingBucketName:
-    Description: S3 Bucket Name
-    Value: !Ref S3PingBucket
-    Export:
-      Name: !Sub ${StackPrefix}-S3PingBucketName
+#Outputs:
+
