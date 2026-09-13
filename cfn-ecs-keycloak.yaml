@@ -12,10 +12,6 @@ Parameters:
     Type: String
     AllowedValues: ["Dev", "Staging", "Production"]
     Default: Production
-  S3PingBucketName:
-    Description: S3 Bucket Name
-    Type: String
-    Default: mysd33bucket123ping
   KeycloakAdminUsername:
     Description: Keycloak admin username
     Type: String
@@ -63,14 +59,6 @@ Mappings:
 #Conditions: 
 
 Resources: 
-# S3 for S3_PING
-  S3PingBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Ref S3PingBucketName
-      Tags:
-        - Key: Name
-          Value: !Sub Bucket-${S3PingBucketName}
 # ALB for Keycloak
   # Public ALB
   PublicALBForKeycloak:
@@ -177,23 +165,18 @@ Resources:
             # HTTP Enabled
             - Name: KC_HTTP_ENABLED
               Value: !Ref KeycloakHttpEnabled
+            # TODO: scheme should be changed to `https`
             # Keycloak Hostname
             - Name: KC_HOSTNAME
-              Value : !GetAtt  PublicALBForKeycloak.DNSName
+              Value: !Sub "http://${PublicALBForKeycloak.DNSName}"
             - Name: KC_HOSTNAME_ADMIN
-              Value : !GetAtt  PublicALBForKeycloak.DNSName
+              Value: !Sub "http://${PublicALBForKeycloak.DNSName}"
             # Hostname Verification disabled
             - Name: KC_HOSTNAME_STRICT
               Value: !Ref KeycloakHostnameStrict
             # Cache Provider(Infinispan)
             - Name: KC_CACHE
               Value: 'ispn'
-            # Infinispan Cache Stack
-            - Name: KC_CACHE_STACK
-              Value: 'ec2'
-            # using S3_PING
-            - Name: JAVA_OPTS_APPEND
-              Value: !Sub '-Djgroups.s3.region_name=${AWS::Region} -Djgroups.s3.bucket_name=${S3PingBucket}'
             - Name: KC_DB_URL
               Value:
                 Fn::Join: 

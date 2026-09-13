@@ -288,7 +288,6 @@ Resources:
       - !Ref BatchECSTaskRole
       - !Ref ScheduleLaunchECSTaskRole
       - !Ref BatchJobflowJobRole
-      - !Ref KeycloakECSTaskRole
 
   #IAM Policy for SQS Access
   SQSAccessPolicy:
