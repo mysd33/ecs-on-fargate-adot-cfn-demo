@@ -383,7 +383,6 @@ Resources:
       - !Ref BackendECSTaskRole
       - !Ref BatchECSTaskRole
       - !Ref BatchJobflowJobRole
-      - !Ref KeycloakECSTaskRole
 
   #IAM Policy for Systems Manager Parameter Store Access
   SSMParameterStoreAccessPolicy:
@@ -404,7 +403,6 @@ Resources:
       - !Ref BatchECSTaskRole
       - !Ref ScheduleLaunchECSTaskRole
       - !Ref BatchJobflowJobRole
-      - !Ref KeycloakECSTaskRole
 
   #IAM Role for ECS Task Execution and AWS Batch Execution
   ECSTaskExecutionRole:
