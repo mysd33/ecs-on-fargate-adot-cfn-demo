@@ -20,10 +20,6 @@ Parameters:
     Description: Keycloak admin password
     Type: String
     Default: admin
-  KeycloakJDBCScheme:
-    Description: Keycloak JDBC scheme
-    Type: String
-    Default: jdbc:aws-wrapper:postgresql
   KeycloakDBName:
     Description: Keycloak database name
     Type: String
@@ -229,7 +225,7 @@ Resources:
             - Fn::ImportValue: !Sub ${StackPrefix}-PrivateSubnetOneId
             - Fn::ImportValue: !Sub ${StackPrefix}-PrivateSubnetTwoId
           SecurityGroups:
-            - Fn::ImportValue: !Sub ${StackPrefix}-PublicALBSecurityGroup-ID
+            - Fn::ImportValue: !Sub ${StackPrefix}-PublicECSSecurityGroup-ID
       # Rolling update
       DeploymentController:
         Type: ECS
