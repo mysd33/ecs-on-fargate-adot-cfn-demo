@@ -46,6 +46,8 @@
     * Keycloakは、ECSで可用性構成でデプロイされるようになっている。
         * [分散キャッシュ](https://www.keycloak.org/server/caching)の仕組みとしてデフォルト設定のjdbc-ping方式でクラスタノードのヘルスチェックを行う設定となっている。
             * この他、DNS_PING方式もあるそうで、コンテナ環境ではDNS_PINGを利用するケースが多いとのこと。
+        * ALBを用いたロードバランシングが構成されている。
+            * 簡易的な開発用のため、httpでのアクセス構成となっている。httpsでのアクセスは現状未対応。
         * DBは、業務DBと同様に、Aurora Serverless v2 for Postgresを使用している。
         
         ![Keycloak構成図](img/keycloak.png)

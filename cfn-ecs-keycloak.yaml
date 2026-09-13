@@ -62,7 +62,9 @@ Resources:
   PublicALBForKeycloak:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:      
-      Name: !Sub ${StackPrefix}-PublicALBForKeycloak
+      # Name must be lowercase letters because the ALB DNS Name must be lowercase letters as well.
+      # If the DNS name contains uppercase letters, Keycloak's `redirect_uri` check fails, resulting in an `invalid_redirect_uri` error.
+      Name: demo-keycloak
       Subnets: 
         - Fn::ImportValue: !Sub ${StackPrefix}-PublicSubnetOneId
         - Fn::ImportValue: !Sub ${StackPrefix}-PublicSubnetTwoId
