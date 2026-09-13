@@ -1018,6 +1018,9 @@ aws cloudformation delete-stack --stack-name ECS-SERVICE-Stack
 aws cloudformation delete-stack --stack-name ECS-TASK-Stack
 aws cloudformation delete-stack --stack-name ECS-CLUSTER-Stack
 aws cloudformation delete-stack --stack-name ECS-SSM-PARAM-Stack
+
+aws cloudformation delete-stack --stack-name ECS-KEYCLOAK-Stack
+
 aws cloudformation delete-stack --stack-name ECS-TG-BG-Stack
 aws cloudformation delete-stack --stack-name ECS-ALB-Stack
 aws cloudformation delete-stack --stack-name ECS-DYNAMODB-Stack
