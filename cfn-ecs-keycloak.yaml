@@ -24,15 +24,6 @@ Parameters:
     Description: Keycloak admin password
     Type: String
     Default: admin
-  KeycloakDBEngine:
-    Description: Keycloak database engine
-    Type: String
-    Default: postgres
-  KeycloakJDBCDriver:
-    Description: Keycloak JDBC driver
-    Type: String
-    # Amazon Web Services JDBC Driver
-    Default: software.amazon.jdbc.Driver
   KeycloakJDBCScheme:
     Description: Keycloak JDBC scheme
     Type: String
@@ -183,14 +174,6 @@ Resources:
               Value: !Ref KeycloakAdminUsername
             - Name: KEYCLOAK_ADMIN_PASSWORD
               Value: !Ref KeycloakAdminPassword
-            # Keycloak Database Configuration
-            - Name: KC_DB
-              Value: !Ref KeycloakDBEngine
-            - Name: KC_DB_DRIVER
-              Value: !Ref KeycloakJDBCDriver
-            # Keycloak Health Check Enabled
-            - Name: KC_HEALTH_ENABLED
-              Value: 'true'
             # HTTP Enabled
             - Name: KC_HTTP_ENABLED
               Value: !Ref KeycloakHttpEnabled
@@ -215,12 +198,12 @@ Resources:
               Value:
                 Fn::Join: 
                   - ""
-                  - - !Sub "${KeycloakJDBCScheme}://"
+                  - - "jdbc:aws-wrapper:postgresql://"
                     - Fn::ImportValue: !Sub ${StackPrefix}-RDSClusterEndpointAddress
                     - ":"
                     - Fn::ImportValue: !Sub ${StackPrefix}-RDSClusterEndpointPort
                     - "/"
-                    - Fn::ImportValue: !Ref KeycloakDBName
+                    - !Ref KeycloakDBName
           Secrets:
             - Name: KC_DB_USERNAME
               ValueFrom:

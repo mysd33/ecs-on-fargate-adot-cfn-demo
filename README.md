@@ -346,10 +346,12 @@ aws cloudformation create-stack --stack-name ECS-SG-Stack --template-body file:/
     * 「--parameters ParameterKey=TerminalCidrIP,ParameterValue=X.X.X.X/X」
 
 ### 5.3. VPC Endpointの作成とプライベートサブネットのルートテーブル更新
+
 ```sh
 aws cloudformation validate-template --template-body file://cfn-vpe.yaml
 aws cloudformation create-stack --stack-name ECS-VPE-Stack --template-body file://cfn-vpe.yaml
 ```
+
 ### 5.4. （作成任意）NAT Gatewayの作成とプライベートサブネットのルートテーブル更新
 
 > [!WARNING]
@@ -540,6 +542,9 @@ psql -h (Auroraのクラスタエンドポイント) -U postgres -d testdb
 
 # Keycloak用のDBを作成
 CREATE DATABASE keycloak;
+# Keycloak用のDBに接続確認
+\c keycloak
+\q
 ```
 
 
