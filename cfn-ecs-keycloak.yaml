@@ -43,8 +43,10 @@ Mappings:
       "ContainerName" : "ecsdemo-keycloak"
       "ContainerImage" : "keycloak-sample:latest"
       "ContainerPort" : 8080
+      "ContainerTLSPort" : 8443
+      # https://www.keycloak.org/observability/health#_healthcheck
       "HealthCheckContainerPort" : 9000
-      "HealthCheck" : "curl -f http://localhost:9000/health || exit 1"
+      "HealthCheck" : "bash -c '{ printf \"HEAD /health/ready HTTP/1.0\\r\\n\\r\\n\" >&0; grep \"HTTP/1.0 200\"; } 0<>/dev/tcp/127.0.0.1/9000'"
   KeycloakServiceMap:
     Production:
       "DesiredCount": 2
@@ -79,10 +81,17 @@ Resources:
         Fn::ImportValue: !Sub ${StackPrefix}-VPC-ID
       Port: 80
       Protocol: HTTP
+      # Health check for Keycloak
+      # https://www.keycloak.org/observability/health#_keycloak_health_check_endpoints
+      HealthCheckPath: /health/ready
       HealthCheckPort: 9000
-      HealthCheckPath: /health
-      HealthCheckIntervalSeconds: 30
+      HealthCheckProtocol: HTTP
+      HealthCheckIntervalSeconds: 10
       HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: '60'
       Tags:
         - Key: Name
           Value: !Sub ${StackPrefix}-PubALBForKeycloakDfTg
@@ -96,6 +105,10 @@ Resources:
       DefaultActions: 
         - Type: forward
           TargetGroupArn: !Ref PublicALBForKeycloakDefaultTargetGroup
+
+# TODO: Not supported yet: HTTPS(443) 
+#       Add HTTPS(443) Listener and Target Group(8443) for the public ALB for Keycloak
+
 # ECS Cluster for Keycloak
   KeycloakECSCluster:
     Type: AWS::ECS::Cluster
@@ -143,6 +156,7 @@ Resources:
             - '--optimized'
           PortMappings:
             - ContainerPort: !FindInMap [KeycloakTaskDefinitionMap, !Ref EnvironmentType, ContainerPort]
+            - ContainerPort: !FindInMap [KeycloakTaskDefinitionMap, !Ref EnvironmentType, ContainerTLSPort]
             - ContainerPort: !FindInMap [KeycloakTaskDefinitionMap, !Ref EnvironmentType, HealthCheckContainerPort]
           HealthCheck:
             Command:
@@ -154,14 +168,17 @@ Resources:
             # Keycloak Configuration
             # https://www.keycloak.org/server/all-config#category-config?q=hostname
             # Keycloak Admin Account
-            - Name: KEYCLOAK_ADMIN
+            - Name: KC_BOOTSTRAP_ADMIN_USERNAME
               Value: !Ref KeycloakAdminUsername
-            - Name: KEYCLOAK_ADMIN_PASSWORD
+            - Name: KC_BOOTSTRAP_ADMIN_PASSWORD
               Value: !Ref KeycloakAdminPassword
+            # TODO: scheme should be changed to `https` when production environment is used
             # HTTP Enabled
             - Name: KC_HTTP_ENABLED
               Value: !Ref KeycloakHttpEnabled
-            # TODO: scheme should be changed to `https`
+            # Management(Health check) scheme
+            - Name: KC_HTTP_MANAGEMENT_SCHEME
+              Value: 'http'
             # Keycloak Hostname
             - Name: KC_HOSTNAME
               Value: !Sub "http://${PublicALBForKeycloak.DNSName}"
@@ -225,7 +242,7 @@ Resources:
             - Fn::ImportValue: !Sub ${StackPrefix}-PrivateSubnetOneId
             - Fn::ImportValue: !Sub ${StackPrefix}-PrivateSubnetTwoId
           SecurityGroups:
-            - Fn::ImportValue: !Sub ${StackPrefix}-PublicECSSecurityGroup-ID
+            - Fn::ImportValue: !Sub ${StackPrefix}-PublicKeycloakECSSecurityGroup-ID
       # Rolling update
       DeploymentController:
         Type: ECS

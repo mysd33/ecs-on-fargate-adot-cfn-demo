@@ -100,7 +100,7 @@ Resources:
         - Key: Name
           Value: !Sub ${StackPrefix}-PrivALB-SG          
   
-  #Security Group of Public ECS for BFF and Keycloak
+  #Security Group of Public ECS for BFF
   PublicECSSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -116,6 +116,55 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${StackPrefix}-PubECS-SG  
+
+  #Security Group of Public ECS for Keycloak
+  PublicKeycloakECSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Access only from public ALB
+      VpcId:
+        Fn::ImportValue: !Sub ${StackPrefix}-VPC-ID
+      SecurityGroupIngress:        
+        - SourceSecurityGroupId: !Ref PublicALBSecurityGroup
+          IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          Description: Ingress from the public ALB
+        - SourceSecurityGroupId: !Ref PublicALBSecurityGroup
+          IpProtocol: tcp
+          FromPort: 8443
+          ToPort: 8443
+          Description: Ingress from the public ALB
+        - SourceSecurityGroupId: !Ref PublicALBSecurityGroup
+          IpProtocol: tcp
+          FromPort: 9000
+          ToPort: 9000
+          Description: Management health check from the public ALB
+      Tags:
+        - Key: Name
+          Value: !Sub ${StackPrefix}-PubKeycloakECS-SG  
+
+# Security Group Ingress rules for Keycloak JGroups communication
+# https://www.keycloak.org/server/caching#network-ports
+  KeycloakJGroupsTcpIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref PublicKeycloakECSSecurityGroup
+      SourceSecurityGroupId: !Ref PublicKeycloakECSSecurityGroup
+      IpProtocol: tcp
+      FromPort: 7800
+      ToPort: 7800
+      Description: JGroups TCP traffic between Keycloak tasks
+
+  KeycloakJGroupsFdSockIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref PublicKeycloakECSSecurityGroup
+      SourceSecurityGroupId: !Ref PublicKeycloakECSSecurityGroup
+      IpProtocol: tcp
+      FromPort: 57800
+      ToPort: 57800
+      Description: JGroups FD_SOCK2 traffic between Keycloak tasks
   
   #Security Group of Private ECS for Backend
   PrivateECSSecurityGroup:
@@ -180,6 +229,11 @@ Resources:
           FromPort: 5432
           ToPort: 5432
           Description: Ingress from the Public ECS 
+        - SourceSecurityGroupId: !Ref PublicKeycloakECSSecurityGroup
+          IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          Description: Ingress from the Public Keycloak ECS
         - SourceSecurityGroupId: !Ref PrivateECSSecurityGroup
           IpProtocol: tcp
           FromPort: 5432
@@ -225,6 +279,11 @@ Outputs:
     Value:  !Ref PublicECSSecurityGroup
     Export: 
       Name: !Sub ${StackPrefix}-PublicECSSecurityGroup-ID
+  PublicKeycloakECSSecurityGroupID:
+    Description: PublicKeycloakECSSecurityGroup ID
+    Value:  !Ref PublicKeycloakECSSecurityGroup
+    Export: 
+      Name: !Sub ${StackPrefix}-PublicKeycloakECSSecurityGroup-ID
   PrivateECSSecurityGroupID:
     Description: PrivateECSSecurityGroup ID
     Value:  !Ref PrivateECSSecurityGroup
