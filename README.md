@@ -602,8 +602,10 @@ aws cloudformation create-stack --stack-name ECS-KEYCLOAK-Stack --template-body 
 * ロールの設定
     * 左のメニューの「Realm roles」をクリックし、「Create Role」をクリックして新しいロールを作成する。
         * Role Name: `ADMIN`
+        * Description: 管理者
     * もう一度、「Create Role」をクリックして新しいロールを作成する。
         * Role Name: `GENERAL`
+        * Description: 一般ユーザ
     * グループにロールを割り当てる
         * 左のメニューの「Groups」をクリックし、作成した`admin`グループをクリックする。
         * 「Role Mappings」タブをクリックし、「Assign Roles」から「Realm Roles」を選択し、グループに`ADMIN`ロールを割り当てる。
@@ -611,8 +613,8 @@ aws cloudformation create-stack --stack-name ECS-KEYCLOAK-Stack --template-body 
 * BFFアプリケーションのクライアントを作成
     * 左のメニューの「Clients」をクリックし、「Create client」をクリックして新しいクライアントを作成する。
         * Client Type: `OpenID Connect`
-        * Client ID: `sample-bff-oidc`※任意の文字列でよい
-        * Name: `sample-bff`※任意の文字列でよい
+        * Client ID: `sample-bff-oidc`
+        * Name: `sample-bff`
         * Client authentication: `On`
         * Authentication flow: `Standard flow`にチェック
         * Require PKCE: `On`
