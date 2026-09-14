@@ -1,6 +1,6 @@
 <mxfile host="Electron">
   <diagram name="ページ-1" id="I4UEkXlJsu1wuISCmKk-">
-    <mxGraphModel dx="1047" dy="701" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+    <mxGraphModel dx="1256" dy="841" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -78,7 +78,7 @@
         <mxCell id="RGzsY6gK0uOnhv9mW0hC-30" parent="RGzsY6gK0uOnhv9mW0hC-2" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#C925D1;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.aurora_instance;" value="" vertex="1">
           <mxGeometry height="49" width="49" x="518" y="103" as="geometry" />
         </mxCell>
-        <mxCell id="RGzsY6gK0uOnhv9mW0hC-33" edge="1" parent="RGzsY6gK0uOnhv9mW0hC-2" source="RGzsY6gK0uOnhv9mW0hC-15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="RGzsY6gK0uOnhv9mW0hC-30" value="&lt;div&gt;postgresql:&lt;/div&gt;5432番">
+        <mxCell id="RGzsY6gK0uOnhv9mW0hC-33" edge="1" parent="RGzsY6gK0uOnhv9mW0hC-2" source="RGzsY6gK0uOnhv9mW0hC-15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="RGzsY6gK0uOnhv9mW0hC-30" value="&lt;div&gt;postgresql:&lt;/div&gt;5432番&lt;div&gt;&lt;span style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212)); color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;※jdbc-pingでも&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212)); color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;使用&lt;/span&gt;&lt;/div&gt;">
           <mxGeometry relative="1" x="0.7471" as="geometry">
             <mxPoint as="offset" />
             <Array as="points">
@@ -92,7 +92,7 @@
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="RGzsY6gK0uOnhv9mW0hC-16" edge="1" parent="RGzsY6gK0uOnhv9mW0hC-2" source="RGzsY6gK0uOnhv9mW0hC-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="RGzsY6gK0uOnhv9mW0hC-14" value="http: 8080番ポート&lt;div&gt;(https: 8443番ポート)&lt;br&gt;&lt;div&gt;ヘルスチェック:9000番ポート&lt;/div&gt;&lt;/div&gt;">
+        <mxCell id="RGzsY6gK0uOnhv9mW0hC-16" edge="1" parent="RGzsY6gK0uOnhv9mW0hC-2" source="RGzsY6gK0uOnhv9mW0hC-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="RGzsY6gK0uOnhv9mW0hC-14" value="http: 8080番ポート&lt;div&gt;(https: 8443番ポート)&lt;br&gt;&lt;div&gt;ヘルスチェック等:9000番ポート&lt;/div&gt;&lt;/div&gt;">
           <mxGeometry relative="1" x="0.0099" y="25" as="geometry">
             <mxPoint as="offset" />
             <Array as="points">
