@@ -28,12 +28,8 @@ Parameters:
     Description: Enable HTTP for Keycloak
     Type: String
     AllowedValues: ["true", "false"]
+    # TODO: scheme should be changed to `false` when production environment is used
     Default: "true"
-  KeycloakHostnameStrict:
-    Description: Enable strict hostname verification for Keycloak
-    Type: String
-    AllowedValues: ["true", "false"]
-    Default: "false"
  
 Mappings: 
   KeycloakTaskDefinitionMap:
@@ -54,7 +50,8 @@ Mappings:
       "RollingUpdateMinimumHealthyPercent": 0
 
 
-#Conditions: 
+Conditions:
+  isKeycloakHttpEnabled: !Equals [!Ref KeycloakHttpEnabled, "true"]
 
 Resources: 
 # ALB for Keycloak
@@ -174,21 +171,21 @@ Resources:
               Value: !Ref KeycloakAdminUsername
             - Name: KC_BOOTSTRAP_ADMIN_PASSWORD
               Value: !Ref KeycloakAdminPassword
-            # TODO: scheme should be changed to `https` when production environment is used
             # HTTP Enabled
-            - Name: KC_HTTP_ENABLED
-              Value: !Ref KeycloakHttpEnabled
+            - !If
+              - isKeycloakHttpEnabled
+              - Name: KC_HTTP_ENABLED
+                Value: 'true'
+              - !Ref AWS::NoValue
             # Management(Health check) scheme
-            - Name: KC_HTTP_MANAGEMENT_SCHEME
-              Value: 'http'
+            - !If
+              - isKeycloakHttpEnabled
+              - Name: KC_HTTP_MANAGEMENT_SCHEME
+                Value: 'http'
+              - !Ref AWS::NoValue
             # Keycloak Hostname
             - Name: KC_HOSTNAME
-              Value: !Sub "http://${PublicALBForKeycloak.DNSName}"
-            - Name: KC_HOSTNAME_ADMIN
-              Value: !Sub "http://${PublicALBForKeycloak.DNSName}"
-            # Hostname Verification disabled
-            - Name: KC_HOSTNAME_STRICT
-              Value: !Ref KeycloakHostnameStrict
+              Value: !GetAtt PublicALBForKeycloak.DNSName
             # Cache Provider(Infinispan)
             - Name: KC_CACHE
               Value: 'ispn'

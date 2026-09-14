@@ -569,6 +569,7 @@ aws cloudformation create-stack --stack-name ECS-KEYCLOAK-Stack --template-body 
     * 管理者のユーザ名、パスワードを設定する。
         * ユーザ名: admin
         * パスワード: admin
+            * CloudFormationで作成した上記の管理者ユーザは一時的な管理者ユーザであるため、継続的に利用する場合は、恒久的な管理者ユーザを作成し、一時的な管理者ユーザを削除する。
 
 * レルムを作成
     * [Keycloak管理コンソール](http://(<KeycloakのALBのDNS名>))に管理者ユーザログイン
