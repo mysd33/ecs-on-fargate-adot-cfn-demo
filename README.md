@@ -37,11 +37,8 @@
         ![純バッチ処理イメージ](img/ecs-batch-jobflow.png)
 
 * ユーザ認証・認可（OIDC）、API認可（OAuth2.0）
-    * OIDCプロバイダのOSS製品であるKeycloakを利用している。
-        * SSOによるユーザ認証が可能。認可コードグラントによるユーザ認証を実装している。
-        * SLOを実装し、バックチャネルログアウトに対応している。
-        * OIDCによるユーザ認証後、バックエンド（リソースサーバとの連携）において、OAuth2.0のアクセストークンによるAPI認可の実装をしている。
-            * アクセストークンの検証には、イントロスペクションエンドポイントに対応した例になっている。
+    * OIDCやOAuth2.0の技術を使って、Keycloak、GitHub、Googleなどの認証プロバイダと連携することが可能なサンプルになっている。
+    * 特にKeycloackは、ユーザ認証については認可コードフローを使用したシングルサインオン(SSO)、バックチャネルログアウトによるシングルサインアウト（SLO）、IDトークンやユーザー情報エンドポイントからのユーザ情報取得、レルムロールに基づくユーザ認可、アクセストークンのスコープを使ったリソースサーバへのAPI認可、イントロスペクションエンドポイントによるアクセストークン検証といった、OIDC/OAuth2.0の代表的な機能を網羅的に実装している。
 
     * Keycloakは、ECSで可用性構成でデプロイされるようになっている。
         * [分散キャッシュ](https://www.keycloak.org/server/caching)の仕組みとして、Infinispanを利用している。
@@ -49,12 +46,154 @@
             * 57800番は障害検知用ポート
         * クラスタに参加する他のノードを検知するのには、デフォルト設定のjdbc-ping方式で追跡するようになっている。
         * ALBを用いたロードバランシングが構成されている。
-            * 簡易的な開発用のため、httpでのアクセス構成となっている。httpsでのアクセスまでは現状未対応。
+            * 簡易的な開発用のため、httpでのアクセス構成となっている。httpsでのアクセスはACMやDNSの設定が必要となることから、現状未対応。
             * Keycloakでは、通常の8080/8443でのアクセスとは別に、ヘルスチェックやメトリックス取得用に管理インタフェースが9000番ポートで提供されている。
         * DBは、業務DBと同様に、Aurora Serverless v2 for Postgresを使用している。
             * 個人環境での簡易的な開発用のため、コスト節約で、業務DBのAuroraと共用しているが、本来は別で構築したほうがよい。
  
         ![Keycloak構成図](img/keycloak.png)
+
+    * 認可コードフローによるユーザ認証・認可、API認可
+
+    ```mermaid
+    sequenceDiagram
+        actor User as ユーザ
+        participant Agent as User Agent(ブラウザ)
+        participant RP as Relying Party(BFF)
+        participant Session as セッション（キャッシュサービス等）
+        participant RS as Resource Server(Backend)
+        participant OP as OpenID Provider(Keycloak)
+
+
+        User->>Agent: ログイン開始要求    
+        activate Agent
+        Agent->>RP: ログイン開始要求
+        activate RP
+        RP-->>Agent: OPの認可エンドポイントへのリダイレクト
+        deactivate RP    
+        Agent->>OP: 認可エンドポイントへアクセス
+        activate OP
+            Note right of OP: SSOセッションが存在する場合、ログイン済でログイン画面はスキップ
+        OP-->>Agent: ログイン画面表示
+        deactivate OP    
+        Agent-->>User: ログイン画面表示
+        deactivate Agent
+        User->>Agent: ユーザID・パスワード入力
+        activate Agent
+        Agent->>OP: ユーザID・パスワード送信
+        activate OP
+        OP-->OP: 認証成功・SSOセッション生成
+        OP-->>Agent: 認可コード返却・RPのトークン取得処理へリダイレクト
+        deactivate OP
+        Agent-->>RP: トークン取得処理要求（認可コード付き）
+        activate RP
+        RP->>OP: トークンリクエスト（認可コード付き）
+        activate OP
+        OP-->>RP: 各トークン返却（IDトークン、アクセストークン、リフレッシュトークン）
+        deactivate OP
+        RP->>RP: IDトークン検証
+        RP->>OP: UserInfoエンドポイントへアクセス（アクセストークン付き）
+        activate OP
+        OP-->>RP: ユーザ情報返却
+        deactivate OP
+        RP->>Session: 各トークン保存
+        activate Session
+        Session-->>RP: トークン保存完了
+        deactivate Session 
+        RP-->>Agent: 認証成功・ログイン成功ページへリダイレクト
+        deactivate RP
+        Agent->>RP: ログイン成功後の画面表示要求
+        activate RP
+        RP->>Session: ユーザ情報、トークン取得
+        activate Session
+        Session-->>RP: ユーザ情報、トークン返却
+        deactivate Session
+        RP->>RP: IDトークンのレルムロール等に基づくユーザ認可
+        RP->>RP: ビジネスロジック実行
+        activate RP
+        RP->>RS: APIリクエスト(アクセストークン付き)
+        activate RS
+        alt 公開鍵での検証
+            RS->>OP: 公開鍵取得
+            activate OP
+            OP-->>RS: 公開鍵返却
+            deactivate OP
+            RS->>RS: アクセストークン検証
+        else イントロスペクションエンドポイントでの検証
+            RS->>OP: イントロスペクションエンドポイントへアクセス（アクセストークン）
+            activate OP
+            OP-->>RS: イントロスペクション結果返却
+            deactivate OP
+        end
+        Note right of RS: 有効期限切れの場合はリフレッシュトークンで再取得
+        RS->>RS: API認可
+        RS->>RS: ビジネスロジック実行
+        RS->>RP: APIレスポンス
+        deactivate RS
+        deactivate RP
+        RP-->>Agent: ログイン成功後の画面表示
+        deactivate RP    
+        Agent-->>User: ログイン成功ページ表示    
+        deactivate Agent 
+    ```
+
+    * RP起因のログアウト
+
+    ```mermaid
+    sequenceDiagram
+        actor User as ユーザ
+        participant Agent as User Agent(ブラウザ)
+        participant RP as Relying Party(BFF)
+        participant Session as セッション（キャッシュサービス等）    
+        participant OP as OpenID Provider(Keycloak)
+        participant RP2 as Relying Party(Other App)
+
+        User->>Agent: ログアウト要求
+        activate Agent
+        Agent->>RP: ログアウト要求
+        activate RP
+        RP->>Session: セッション削除
+        activate Session
+        Session-->>RP: セッション削除完了
+        deactivate Session
+        RP-->>Agent: OPのエンドセッションエンドポイントへリダイレクト
+        deactivate RP
+        Agent-->>OP: エンドセッションエンドポイントへ処理要求
+        activate OP
+        OP-->>RP2: 別アプリへのバックチャネルログアウトエンドポイントへアクセス
+        activate RP2
+        RP2-->>OP: バックチャネルログアウト完了
+        deactivate RP2
+        OP --> OP: SSOセッション削除
+        OP-->>Agent: RPのログアウト完了後画面へリダイレクト
+        deactivate OP
+        Agent-->>RP: RPのログアウト完了後画面表示要求
+        activate RP    
+        RP-->>Agent: RPのログアウト完了後画面表示
+        deactivate RP
+        Agent-->>User: RPのログアウト完了後画面表示
+        deactivate Agent
+
+    ```
+
+    * バックチャネルログアウト
+    ```mermaid
+    sequenceDiagram
+        participant OP as OpenID Provider(Keycloak)
+        participant RP as Relying Party(BFF)
+        participant Session as セッション（キャッシュサービス等）            
+        
+        OP-->>RP: バックチャネルログアウト要求        
+        activate RP
+        Note right of RP: 他のアプリ側でログアウトされバックチャネルログアウト要求を受信した場合の処理
+        RP->>Session: セッション削除
+        activate Session
+        Session-->>RP: セッション削除完了
+        deactivate Session
+        RP-->>OP: バックチャネルログアウト完了
+        deactivate RP
+    ```
+
 
 
 ### 1.3. StepFunctionsによるジョブフロー実行制御
