@@ -652,7 +652,7 @@ psql -h (Auroraのクラスタエンドポイント) -U postgres -d testdb
     valkey-cli -h (ElastiCacheのEndpoint) --tls
     ```
 
-## 13. OIDCプロバイダ（Keycloak）の環境構築
+## 13. OIDCプロバイダの環境構築
 ### 13.1. Keycloak DockerイメージのビルドとECRへのプッシュ
 
 * 以前の手順で、未実行の場合であれば、コマンドを実行
@@ -809,7 +809,27 @@ aws cloudformation create-stack --stack-name ECS-KEYCLOAK-Stack --template-body 
             * Included Client Audience: `sample-backend-oidc`
             * Add to access token: `On`、Add to token introspection: `On`にチェックする。（デフォルトのまま）
 
-### 13.5. Secrets Manager環境構築
+### 13.5. GitHubの設定
+* GitHubアカウントを作成
+* GitHubのOAuth Appを作成
+    * GitHubのOAuth2.0認証システムを使用するため、[GitHubのDevelopper settingのページ](https://github.com/settings/developers)で、「New OAuth App」をクリックして、アプリを追加する。
+        * Application name:任意の文字列
+            * 例: `demo`
+        * Home Page URL: `http://(BFFのALBのDNS名)`
+        * Authorization callback URL: `http://(BFFのALBのDNS名)/login/oauth2/code/github`
+
+* クライアントシークレットを生成
+    * Client secretsの「Generate a new client secret」をクリックして、クライアントシークレットを生成する。
+
+###  13.6. Googleの設定
+* Googleアカウントを作成
+* [Google API Console](https://console.developers.google.com/)で、「OAuth同意画面」を作成。
+* Google API ConsoleのOAuth同意画面の[クライアント](https://console.cloud.google.com/auth/clients)のメニューを選択し、OAuth 2.0 クライアント IDの画面「＋クライアントを作成」から「OAuth 2.0 クライアントID」を作成
+    * アプリケーションの種類: ウェブアプリケーション
+    * 名前:任意の文字列
+    * 承認済みのリダイレクトURI: http://(BFFのALBのDNS名)/login/oauth2/code/google
+
+### 13.7. Secrets Manager環境構築
 * Keycloak、GitHub、GoogleのクライアントシークレットをSecrets Managerに追加する
 
 ```sh
