@@ -89,7 +89,7 @@
             activate Agent
             Agent->>OP: ユーザID・パスワード送信
             activate OP
-            OP->OP: 認証成功・SSOセッション生成
+            OP->>OP: 認証成功・SSOセッション生成
             OP-->>Agent: 認可コード返却・RPのトークン取得処理へリダイレクト
             deactivate OP
             Agent-->>RP: トークン取得処理要求（認可コード付き）
