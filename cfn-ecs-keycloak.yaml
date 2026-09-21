@@ -259,3 +259,8 @@ Outputs:
     Value: !GetAtt PublicALBForKeycloak.DNSName
     Export: 
       Name: !Sub ${StackPrefix}-PubALBForKeycloak-DNS
+  PublicALBForKeycloakUrl:
+    Description: "Public ALB URL for Keycloak"
+    Value: !Sub "http://${PublicALBForKeycloak.DNSName}"
+    Export: 
+      Name: !Sub ${StackPrefix}-PubALBForKeycloak-URL

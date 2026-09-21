@@ -25,7 +25,7 @@ Mappings:
       "ContainerName" : "ecsdemo-frontend-app"
       "ContainerImage" : "sample-bff:latest"
       "ContainerPort" : 8080
-      "Profile" : "production,log_container,adot,oidc"
+      "Profile" : "production,log_container,adot"
       "HealthCheck" : "curl -f http://localhost:8080/actuator/health || exit 1"      
     Staging:
       "Memory" : 2048
@@ -33,7 +33,7 @@ Mappings:
       "ContainerName" : "ecsdemo-frontend-app"
       "ContainerImage" : "sample-bff:latest"
       "ContainerPort" : 8080
-      "Profile" : "staging,log_container,adot,oidc"
+      "Profile" : "staging,log_container,adot"
       "HealthCheck" : "curl -f http://localhost:8080/actuator/health || exit 1"            
     Dev:
       "Memory" : 2048
@@ -41,7 +41,7 @@ Mappings:
       "ContainerName" : "ecsdemo-frontend-app"
       "ContainerImage" : "sample-bff:latest"
       "ContainerPort" : 8080
-      "Profile" : "dev,log_container,adot,oidc"
+      "Profile" : "dev,log_container,adot"
       "HealthCheck" : "curl -f http://localhost:8080/actuator/health || exit 1"            
   BackendServiceTaskDefinitionMap:
     Production:
@@ -50,7 +50,7 @@ Mappings:
       "ContainerName" : "ecsdemo-backend-service"
       "ContainerImage" : "sample-backend:latest"
       "ContainerPort" : 8080
-      "Profile" : "production,log_container,oidc"
+      "Profile" : "production,log_container"
       "HealthCheck" : "curl -f http://localhost:8080/actuator/health || exit 1"            
     Staging:
       "Memory" : 2048
@@ -58,7 +58,7 @@ Mappings:
       "ContainerName" : "ecsdemo-backend-service"
       "ContainerImage" : "sample-backend:latest"
       "ContainerPort" : 8080
-      "Profile" : "staging,log_container,oidc"
+      "Profile" : "staging,log_container,adot"
       "HealthCheck" : "curl -f http://localhost:8080/actuator/health || exit 1"            
     Dev:
       "Memory" : 2048
@@ -66,7 +66,7 @@ Mappings:
       "ContainerName" : "ecsdemo-backend-service"
       "ContainerImage" : "sample-backend:latest"
       "ContainerPort" : 8080
-      "Profile" : "dev,log_container,oidc"
+      "Profile" : "dev,log_container,adot"
       "HealthCheck" : "curl -f http://localhost:8080/actuator/health || exit 1"            
   BatchAppTaskDefinitionMap:
     Production:

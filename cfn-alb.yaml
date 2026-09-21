@@ -54,7 +54,8 @@ Resources:
   PublicALB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:      
-      Name: !Sub ${StackPrefix}-PublicALB     
+#      Name: !Sub ${StackPrefix}-PublicALB     
+      Name: demo-public-alb
       Subnets: 
         - Fn::ImportValue: !Sub ${StackPrefix}-PublicSubnetOneId
         - Fn::ImportValue: !Sub ${StackPrefix}-PublicSubnetTwoId
@@ -97,7 +98,8 @@ Resources:
   PrivateALB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:      
-      Name: !Sub ${StackPrefix}-PrivateALB
+#      Name: !Sub ${StackPrefix}-PrivateALB
+      Name: demo-private-alb
       Scheme: internal   
       Subnets: 
         - Fn::ImportValue: !Sub ${StackPrefix}-PrivateSubnetOneId

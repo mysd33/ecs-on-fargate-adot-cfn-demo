@@ -44,8 +44,10 @@ Parameters:
     Default: 0
     # Any positive number is taken to be the number of milliseconds to attempt to acquire an initial connection; the application thread will be blocked during this period. 
     #Default: "30000"
-    
-
+  KeycloakRealmName:
+    Description: Keycloak Realm Name
+    Type: String
+    Default: demo
 
 Resources:
   #common
@@ -210,11 +212,29 @@ Resources:
       Name: !Sub /config/${ProjectName}/${EnvName}/sample-bff/spring.security.oauth2.client.provider.keycloak.issuer-uri
       Type: String
       Value:
-        Fn::Join: 
+        Fn::Join:
           - ""
-          - - "http://"
-            - Fn::ImportValue: !Sub ${StackPrefix}-PubALBForKeycloak-DNS
-
+          - - Fn::ImportValue: !Sub ${StackPrefix}-PubALBForKeycloak-URL
+            - !Sub "/realms/${KeycloakRealmName}"
+# TODO: Change Log Level to INFO for Production Environment
+  SampleBffAppLogLevelParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /config/${ProjectName}/${EnvName}/sample-bff/logging.level.com.example
+      Type: String
+      Value: DEBUG
+  SampleBffSecurityOAuth2LogLevelParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /config/${ProjectName}/${EnvName}/sample-bff/logging.level.org.springframework.security.oauth2
+      Type: String
+      Value: TRACE
+  SampleBffSecurityWebClientLogLevelParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /config/${ProjectName}/${EnvName}/sample-bff/logging.level.org.springframework.web.client
+      Type: String
+      Value: TRACE
   # sample-backend
   SampleBackendDatasourceDynamicRoutingParameter:
     Type: AWS::SSM::Parameter
@@ -228,10 +248,10 @@ Resources:
       Name: !Sub /config/${ProjectName}/${EnvName}/sample-backend/spring.security.oauth2.resourceserver.jwt.issuer-uri
       Type: String
       Value:
-        Fn::Join: 
+        Fn::Join:
           - ""
-          - - "http://"
-            - Fn::ImportValue: !Sub ${StackPrefix}-PubALBForKeycloak-DNS
+          - - Fn::ImportValue: !Sub ${StackPrefix}-PubALBForKeycloak-URL
+            - !Sub "/realms/${KeycloakRealmName}"
   SampleBackendOpaqueTokenIntrospectionUriParameter:
     Type: AWS::SSM::Parameter
     Properties:
@@ -240,10 +260,27 @@ Resources:
       Value:
         Fn::Join: 
           - ""
-          - - "http://"
-            - Fn::ImportValue: !Sub ${StackPrefix}-PubALBForKeycloak-DNS
-            - "/realms/demo/protocol/openid-connect/token/introspect"
-
+          - - Fn::ImportValue: !Sub ${StackPrefix}-PubALBForKeycloak-URL
+            - !Sub "/realms/${KeycloakRealmName}/protocol/openid-connect/token/introspect"
+# TODO: Change Log Level to INFO for Production Environment
+  SampleBackendAppLogLevelParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /config/${ProjectName}/${EnvName}/sample-backend/logging.level.com.example
+      Type: String
+      Value: DEBUG
+  SampleBackendSecurityOAuth2LogLevelParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /config/${ProjectName}/${EnvName}/sample-backend/logging.level.org.springframework.security.oauth2
+      Type: String
+      Value: TRACE
+  SampleBackendSecurityWebClientLogLevelParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /config/${ProjectName}/${EnvName}/sample-backend/logging.level.org.springframework.web.client
+      Type: String
+      Value: TRACE
   # sample-batch
   SampleBatchSqsListenerQueueNameParameter:
     Type: AWS::SSM::Parameter
@@ -258,6 +295,13 @@ Resources:
       Name: !Sub /config/${ProjectName}/${EnvName}/sample-batch/resilience4j.timelimiter.configs.default.timeoutDuration
       Type: String
       Value: 3s
+# TODO: Change Log Level to INFO for Production Environment
+  SampleBatchAppLogLevelParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /config/${ProjectName}/${EnvName}/sample-batch/logging.level.com.example
+      Type: String
+      Value: DEBUG
   #sample-schedulelaunch
   SampleScheduleLaunchBatchQueuesSampleBatchNameParameter:
     Type: AWS::SSM::Parameter
@@ -273,3 +317,10 @@ Resources:
       Name: !Sub /config/${ProjectName}/${EnvName}/sample-batch-jobflow/example.job921.map_size
       Type: String
       Value: "3"
+# TODO: Change Log Level to INFO for Production Environment
+  SampleBatchJobflowAppLogLevelParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /config/${ProjectName}/${EnvName}/sample-batch-jobflow/logging.level.com.example
+      Type: String
+      Value: DEBUG

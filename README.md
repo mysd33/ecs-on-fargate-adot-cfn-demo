@@ -496,13 +496,11 @@ aws cloudformation validate-template --template-body file://cfn-vpe.yaml
 aws cloudformation create-stack --stack-name ECS-VPE-Stack --template-body file://cfn-vpe.yaml
 ```
 
-### 5.4. （作成任意）NAT Gatewayの作成とプライベートサブネットのルートテーブル更新
+### 5.4. NAT Gatewayの作成とプライベートサブネットのルートテーブル更新
 
-> [!WARNING]
-> Keycloakを利用する場合は、NAT Gatewayの作成が必要になりそう
-
-* 本手順では、ECRのイメージ転送量等にかかるNAT Gatewayのコスト節約から、全てVPC Endpointで作成するので、NAT Gatewayは通常不要。
-    * とはいえ、全部VPC Endpointにすると、エンドポイント数分、デモ程度で何度も起動したり落としたりで1時間未満でも時間単位課金でコストがかえって結構かかる場合もある。その場合の調整として、本手順のVPC Endpoint作成対象を減らす等カスタマイズして、VPC Endpoint未作成のリソースアクセスに使用するために以下を追加実行すればよい。
+* 本手順では、AWSの各サービスへのアクセスを極力VPC Endpoint経由で行うようにしている。
+* しかしながら、OIDC（Keycloak）を利用するにあたって、Privateサブネット上のECSのコンテナから、PublicなALBのアドレスにアクセスするために、NAT Gatewayの作成が必要になる。
+    * どうせNAT Gatewayを作成する必要があるのであれば、VPC Endpointのエンドポイント数分の時間単位課金でコストがかかる。コスト最小化だけを考えたデモであれば、NAT Gatewayだけ作成して、VPC Endpointを作成しないという選択肢もある。
 
 ```sh
 aws cloudformation validate-template --template-body file://cfn-ngw.yaml
@@ -705,13 +703,13 @@ aws cloudformation create-stack --stack-name ECS-KEYCLOAK-Stack --template-body 
 
 * Keycloakの管理コンソールにアクセスする。
     * http://(<KeycloakのALBのDNS名>)
+        * CloudFormationの「ECS-KEYCLOAK-Stack」スタックの出力「PublicALBForKeycloakUrl」の値を参照
     * 管理者のユーザ名、パスワードを設定する。
         * ユーザ名: admin
         * パスワード: admin
             * CloudFormationで作成した上記の管理者ユーザは一時的な管理者ユーザであるため、継続的に利用する場合は、恒久的な管理者ユーザを作成し、一時的な管理者ユーザを削除する。
 
-* レルムを作成
-    * [Keycloak管理コンソール](http://(<KeycloakのALBのDNS名>))に管理者ユーザログイン
+* レルムを作成    
     * 左のメニューの「Manage realms」をクリックし、「Create realm」をクリックして新しいレルムを作成する。
         * Realm name: `demo`
     * レルムがdemoに切り替わったら、左のメニューの「Realm settings」をクリックし、「Display name」を設定する。
@@ -738,18 +736,21 @@ aws cloudformation create-stack --stack-name ECS-KEYCLOAK-Stack --template-body 
 * グループの設定
     * 左のメニューの「Groups」をクリックし、「Create group」をクリックして新しいグループを作成する。
         * Group Name: `admin`
-    * もう一度、「Create group」をクリックして新しいグループを作成する。
-        * Group Name: `general`
+        * Description: 管理者グループ
     * Membersタブをクリックし、「Add member」をクリックし、作成したユーザをグループに割り当てる。
         * adminグループに、ユーザ`yamadatr`を割り当てる。
+    * もう一度、「Create group」をクリックして新しいグループを作成する。
+        * Group Name: `general`
+        * Description: 一般ユーザグループ
+    * Membersタブをクリックし、「Add member」をクリックし、作成したユーザをグループに割り当てる。
         * generalグループに、ユーザ`tamuraichr`を割り当てる。
 * ロールの設定
     * 左のメニューの「Realm roles」をクリックし、「Create Role」をクリックして新しいロールを作成する。
         * Role Name: `ADMIN`
-        * Description: 管理者
+        * Description: 管理者ロール
     * もう一度、「Create Role」をクリックして新しいロールを作成する。
         * Role Name: `GENERAL`
-        * Description: 一般ユーザ
+        * Description: 一般ユーザロール
     * グループにロールを割り当てる
         * 左のメニューの「Groups」をクリックし、作成した`admin`グループをクリックする。
         * 「Role Mappings」タブをクリックし、「Assign Roles」から「Realm Roles」を選択し、グループに`ADMIN`ロールを割り当てる。
@@ -764,6 +765,7 @@ aws cloudformation create-stack --stack-name ECS-KEYCLOAK-Stack --template-body 
         * Require PKCE: `On`
         * Root URL: `http://(BFFのALBのDNS名)`
         * Home URL: `http://(BFFのALBのDNS名)`
+            * CloudFormationの「ECS-ALB-Stack」スタックの出力「PublicALBDNS」の値を参照
         * Valid Redirect URIs: `http://(BFFのALBのDNS名)/login/oauth2/code/keycloak`
             * Spring Security OAuth2.0 ClientのデフォルトのリダイレクトエンドポイントのURIは、
                 `/login/oauth2/code/{registrationId}`
@@ -776,6 +778,7 @@ aws cloudformation create-stack --stack-name ECS-KEYCLOAK-Stack --template-body 
     * 「Settings」タブの「Logout Settings」セクションで以下の設定
         * Front channel logout: `Off`
         * Backchannel Logout URL: `http://(BFFのALBのDNS名)/logout/connect/back-channel/keycloak`
+            * CloudFormationの「ECS-ALB-Stack」スタックの出力「PublicALBDNS」の値を参照
             * Spring Security OAuth2.0 ClientのデフォルトのバックチャネルログアウトエンドポイントのURIは、`/logout/connect/back-channel/{registrationId}`
 * IDトークンのクレームにロールを追加する設定
     * 左のメニューで「Clients」をクリックし、`sample-bff-oidc`を選択
@@ -787,8 +790,8 @@ aws cloudformation create-stack --stack-name ECS-KEYCLOAK-Stack --template-body 
     * Introspection エンドポイントを利用して、アクセストークンの検証を行うため、Backendアプリケーションのクライアントを作成する。
     * 左のメニューの「Clients」をクリックし、「Create client」をクリックして新しいクライアントを作成する。
         * Client Type: `OpenID Connect`
-        * Client ID: `sample-backend-oidc`※任意の文字列でよい
-        * Name: `sample-backend`※任意の文字列でよい
+        * Client ID: `sample-backend-oidc`
+        * Name: `sample-backend`
         * Client authentication: `On`
         * Authentication flow: 全てチェックを外す
 * スコープの追加
@@ -810,10 +813,10 @@ aws cloudformation create-stack --stack-name ECS-KEYCLOAK-Stack --template-body 
 * Keycloak、GitHub、GoogleのクライアントシークレットをSecrets Managerに追加する
 
 ```sh
-# Keycloak, GitHub, GoogleのクライアントIDとシークレットを設定
-set KEYCLOAK_RP_CLIENT_ID=XXXX
+# Keycloak, GitHub, GoogleのクライアントIDとシークレットを設定(XXXXのところは、各自入力)
+set KEYCLOAK_RP_CLIENT_ID=sample-bff-oidc
 set KEYCLOAK_RP_CLIENT_SECRET=XXXX
-set KEYCLOAK_RS_CLIENT_ID=XXXX
+set KEYCLOAK_RS_CLIENT_ID=sample-backend-oidc
 set KEYCLOAK_RS_CLIENT_SECRET=XXXX
 set GITHUB_CLIENT_ID=XXXX
 set GITHUB_CLIENT_SECRET=XXXX
@@ -821,8 +824,7 @@ set GOOGLE_CLIENT_ID=XXXX
 set GOOGLE_CLIENT_SECRET=XXXX
 
 aws cloudformation validate-template --template-body file://cfn-secrets-oidc.yaml
-aws cloudformation create-stack --stack-name ECS-SECRETS-OIDC-Stack --template-body file://cfn-secrets-oidc.yaml ^
---parameters ParameterKey=KeycloakRPClientId,ParameterValue=%KEYCLOAK_RP_CLIENT_ID% ParameterKey=KeycloakRPClientSecret,ParameterValue=%KEYCLOAK_RP_CLIENT_SECRET% ParameterKey=KeycloakRSClientId,ParameterValue=%KEYCLOAK_RS_CLIENT_ID% ParameterKey=KeycloakRSClientSecret,ParameterValue=%KEYCLOAK_RS_CLIENT_SECRET% ParameterKey=GitHubClientId,ParameterValue=%GITHUB_CLIENT_ID% ParameterKey=GitHubClientSecret,ParameterValue=%GITHUB_CLIENT_SECRET% ParameterKey=GoogleClientId,ParameterValue=%GOOGLE_CLIENT_ID% ParameterKey=GoogleClientSecret,ParameterValue=%GOOGLE_CLIENT_SECRET%
+aws cloudformation create-stack --stack-name ECS-SECRETS-OIDC-Stack --template-body file://cfn-secrets-oidc.yaml --parameters ParameterKey=KeycloakRPClientId,ParameterValue=%KEYCLOAK_RP_CLIENT_ID% ParameterKey=KeycloakRPClientSecret,ParameterValue=%KEYCLOAK_RP_CLIENT_SECRET% ParameterKey=KeycloakRSClientId,ParameterValue=%KEYCLOAK_RS_CLIENT_ID% ParameterKey=KeycloakRSClientSecret,ParameterValue=%KEYCLOAK_RS_CLIENT_SECRET% ParameterKey=GitHubClientId,ParameterValue=%GITHUB_CLIENT_ID% ParameterKey=GitHubClientSecret,ParameterValue=%GITHUB_CLIENT_SECRET% ParameterKey=GoogleClientId,ParameterValue=%GOOGLE_CLIENT_ID% ParameterKey=GoogleClientSecret,ParameterValue=%GOOGLE_CLIENT_SECRET%
 ```
 
 ## 14. パラメータストア環境構築
