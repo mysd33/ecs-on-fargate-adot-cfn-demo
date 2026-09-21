@@ -1,6 +1,6 @@
 <mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.5.2 Chrome/142.0.7444.265 Electron/39.6.1 Safari/537.36" pages="2">
   <diagram id="Ht1M8jgEwFfnCIfOTk4-" name="RDB版">
-    <mxGraphModel dx="2512" dy="1682" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+    <mxGraphModel dx="1478" dy="989" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -22,7 +22,7 @@
         <mxCell id="GkKB_Pt7ogExMrjGRy1k-16" parent="GkKB_Pt7ogExMrjGRy1k-9" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#4D27AA;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.application_load_balancer;" value="ALB" vertex="1">
           <mxGeometry height="42" width="42" x="25" y="299" as="geometry" />
         </mxCell>
-        <mxCell id="GkKB_Pt7ogExMrjGRy1k-36" parent="GkKB_Pt7ogExMrjGRy1k-9" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#4D27AA;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.nat_gateway;" value="NAT gateway&lt;br&gt;（作成任意）" vertex="1">
+        <mxCell id="GkKB_Pt7ogExMrjGRy1k-36" parent="GkKB_Pt7ogExMrjGRy1k-9" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#4D27AA;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.nat_gateway;" value="NAT gateway&lt;div&gt;※AP⇔Keycloak&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(35, 47, 62), rgb(189, 199, 212));&quot;&gt;間&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(35, 47, 62), rgb(189, 199, 212));&quot;&gt;の通信必要&lt;/span&gt;&lt;/div&gt;" vertex="1">
           <mxGeometry height="40" width="40" x="24" y="385" as="geometry" />
         </mxCell>
         <mxCell id="L4VPfkJwV94OeXhq6mcf-4" parent="GkKB_Pt7ogExMrjGRy1k-9" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#4D27AA;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.application_load_balancer;" value="ALB" vertex="1">
@@ -481,7 +481,7 @@
     </mxGraphModel>
   </diagram>
   <diagram name="DynamoDB併用版" id="pDPuIV9jh8-Y18JKY8jt">
-    <mxGraphModel dx="2093" dy="1402" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+    <mxGraphModel dx="1478" dy="989" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
       <root>
         <mxCell id="C1PDk4WkqHetURb27oMM-0" />
         <mxCell id="C1PDk4WkqHetURb27oMM-1" parent="C1PDk4WkqHetURb27oMM-0" />
@@ -503,7 +503,7 @@
         <mxCell id="C1PDk4WkqHetURb27oMM-7" parent="C1PDk4WkqHetURb27oMM-5" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#4D27AA;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.application_load_balancer;" value="ALB" vertex="1">
           <mxGeometry height="42" width="42" x="25" y="299" as="geometry" />
         </mxCell>
-        <mxCell id="C1PDk4WkqHetURb27oMM-8" parent="C1PDk4WkqHetURb27oMM-5" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#4D27AA;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.nat_gateway;" value="NAT gateway&lt;br&gt;（作成任意）" vertex="1">
+        <mxCell id="C1PDk4WkqHetURb27oMM-8" parent="C1PDk4WkqHetURb27oMM-5" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#4D27AA;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.nat_gateway;" value="NAT gateway&lt;div&gt;※AP⇔Keycloak間&lt;/div&gt;&lt;div&gt;の通信に必要&lt;/div&gt;" vertex="1">
           <mxGeometry height="40" width="40" x="24" y="385" as="geometry" />
         </mxCell>
         <mxCell id="C1PDk4WkqHetURb27oMM-9" parent="C1PDk4WkqHetURb27oMM-5" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#4D27AA;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.application_load_balancer;" value="ALB" vertex="1">

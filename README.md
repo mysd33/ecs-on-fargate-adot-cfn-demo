@@ -38,9 +38,8 @@
 
 * ユーザ認証・認可（OIDC）、API認可（OAuth2.0）
     * OIDCやOAuth2.0の技術を使って、Keycloak、GitHub、Googleなどの認証プロバイダと連携することが可能なサンプルになっている。
-    * 特にKeycloackは、ユーザ認証については認可コードフローを使用したシングルサインオン(SSO)、バックチャネルログアウトによるシングルサインアウト（SLO）、IDトークンやユーザー情報エンドポイントからのユーザ情報取得、レルムロールに基づくユーザ認可、アクセストークンのスコープを使ったリソースサーバへのAPI認可、イントロスペクションエンドポイントによるアクセストークン検証といった、OIDC/OAuth2.0の代表的な機能を網羅的に実装している。
 
-    * Keycloakは、ECSで可用性構成でデプロイされるようになっている。
+    * Keycloakは、本番環境相当のECSでクラスタ構成でデプロイできるような[CloudFormationテンプレート](cfn-ecs-keycloak.yaml)になっている。
         * [分散キャッシュ](https://www.keycloak.org/server/caching)の仕組みとして、Infinispanを利用している。
         * クラスタノード間の通信には、Infinispanの各ノード間で7800番ポートを使用し、各ノードの状態を効率的に共有できる。
             * 57800番は障害検知用ポート
@@ -53,146 +52,154 @@
  
         ![Keycloak構成図](img/keycloak.png)
 
+
+    * Keycloakは、認証以外にも、OIDC/OAuth2.0による典型的なフローとサンプルAPでのSpring Security OAuth2.0を使った機能を実装している。
+        * ユーザ認証については、認可コードフローを使用したシングルサインオン(SSO)を実現している。
+        * シングルサインアウト（SLO）も実現しており、バックチャネルログアウトによるログアウト処理もサポートしている。
+            * 複数アプリの実装がないので、Keycloakのアカウント画面からサインアウトすることで、バックチャネルログアウトの動作を確認できる。
+        * ログイン成功時は、IDトークンやユーザー情報エンドポイントからのユーザ情報取得、レルムロールに基づくユーザ認可が可能である。
+        * アクセストークンのスコープを使ってバックエンドAPI（リソースサーバ）へのAPI認可、イントロスペクションエンドポイントによるアクセストークン検証
+
     * 認可コードフローによるユーザ認証・認可、API認可
 
-    ```mermaid
-    sequenceDiagram
-        actor User as ユーザ
-        participant Agent as User Agent(ブラウザ)
-        participant RP as Relying Party(BFF)
-        participant Session as セッション（キャッシュサービス等）
-        participant RS as Resource Server(Backend)
-        participant OP as OpenID Provider(Keycloak)
+        ```mermaid
+        sequenceDiagram
+            actor User as ユーザ
+            participant Agent as User Agent(ブラウザ)
+            participant RP as Relying Party(BFF)
+            participant Session as セッション（キャッシュサービス等）
+            participant RS as Resource Server(Backend)
+            participant OP as OpenID Provider(Keycloak)
 
 
-        User->>Agent: ログイン開始要求    
-        activate Agent
-        Agent->>RP: ログイン開始要求
-        activate RP
-        RP-->>Agent: OPの認可エンドポイントへのリダイレクト
-        deactivate RP    
-        Agent->>OP: 認可エンドポイントへアクセス
-        activate OP
-            Note right of OP: SSOセッションが存在する場合、ログイン済でログイン画面はスキップ
-        OP-->>Agent: ログイン画面表示
-        deactivate OP    
-        Agent-->>User: ログイン画面表示
-        deactivate Agent
-        User->>Agent: ユーザID・パスワード入力
-        activate Agent
-        Agent->>OP: ユーザID・パスワード送信
-        activate OP
-        OP-->OP: 認証成功・SSOセッション生成
-        OP-->>Agent: 認可コード返却・RPのトークン取得処理へリダイレクト
-        deactivate OP
-        Agent-->>RP: トークン取得処理要求（認可コード付き）
-        activate RP
-        RP->>OP: トークンリクエスト（認可コード付き）
-        activate OP
-        OP-->>RP: 各トークン返却（IDトークン、アクセストークン、リフレッシュトークン）
-        deactivate OP
-        RP->>RP: IDトークン検証
-        RP->>OP: UserInfoエンドポイントへアクセス（アクセストークン付き）
-        activate OP
-        OP-->>RP: ユーザ情報返却
-        deactivate OP
-        RP->>Session: 各トークン保存
-        activate Session
-        Session-->>RP: トークン保存完了
-        deactivate Session 
-        RP-->>Agent: 認証成功・ログイン成功ページへリダイレクト
-        deactivate RP
-        Agent->>RP: ログイン成功後の画面表示要求
-        activate RP
-        RP->>Session: ユーザ情報、トークン取得
-        activate Session
-        Session-->>RP: ユーザ情報、トークン返却
-        deactivate Session
-        RP->>RP: IDトークンのレルムロール等に基づくユーザ認可
-        RP->>RP: ビジネスロジック実行
-        activate RP
-        RP->>RS: APIリクエスト(アクセストークン付き)
-        activate RS
-        alt 公開鍵での検証
-            RS->>OP: 公開鍵取得
+            User->>Agent: ログイン開始要求    
+            activate Agent
+            Agent->>RP: ログイン開始要求
+            activate RP
+            RP-->>Agent: OPの認可エンドポイントへのリダイレクト
+            deactivate RP    
+            Agent->>OP: 認可エンドポイントへアクセス
             activate OP
-            OP-->>RS: 公開鍵返却
-            deactivate OP
-            RS->>RS: アクセストークン検証
-        else イントロスペクションエンドポイントでの検証
-            RS->>OP: イントロスペクションエンドポイントへアクセス（アクセストークン）
+                Note right of OP: SSOセッションが存在する場合、ログイン済でログイン画面はスキップ
+            OP-->>Agent: ログイン画面表示
+            deactivate OP    
+            Agent-->>User: ログイン画面表示
+            deactivate Agent
+            User->>Agent: ユーザID・パスワード入力
+            activate Agent
+            Agent->>OP: ユーザID・パスワード送信
             activate OP
-            OP-->>RS: イントロスペクション結果返却
+            OP-->OP: 認証成功・SSOセッション生成
+            OP-->>Agent: 認可コード返却・RPのトークン取得処理へリダイレクト
             deactivate OP
-        end
-        Note right of RS: 有効期限切れの場合はリフレッシュトークンで再取得
-        RS->>RS: API認可
-        RS->>RS: ビジネスロジック実行
-        RS->>RP: APIレスポンス
-        deactivate RS
-        deactivate RP
-        RP-->>Agent: ログイン成功後の画面表示
-        deactivate RP    
-        Agent-->>User: ログイン成功ページ表示    
-        deactivate Agent 
-    ```
+            Agent-->>RP: トークン取得処理要求（認可コード付き）
+            activate RP
+            RP->>OP: トークンリクエスト（認可コード付き）
+            activate OP
+            OP-->>RP: 各トークン返却（IDトークン、アクセストークン、リフレッシュトークン）
+            deactivate OP
+            RP->>RP: IDトークン検証
+            RP->>OP: UserInfoエンドポイントへアクセス（アクセストークン付き）
+            activate OP
+            OP-->>RP: ユーザ情報返却
+            deactivate OP
+            RP->>Session: 各トークン保存
+            activate Session
+            Session-->>RP: トークン保存完了
+            deactivate Session 
+            RP-->>Agent: 認証成功・ログイン成功ページへリダイレクト
+            deactivate RP
+            Agent->>RP: ログイン成功後の画面表示要求
+            activate RP
+            RP->>Session: ユーザ情報、トークン取得
+            activate Session
+            Session-->>RP: ユーザ情報、トークン返却
+            deactivate Session
+            RP->>RP: IDトークンのレルムロール等に基づくユーザ認可
+            RP->>RP: ビジネスロジック実行
+            activate RP
+            RP->>RS: APIリクエスト(アクセストークン付き)
+            activate RS
+            alt 公開鍵での検証
+                RS->>OP: 公開鍵取得
+                activate OP
+                OP-->>RS: 公開鍵返却
+                deactivate OP
+                RS->>RS: アクセストークン検証
+            else イントロスペクションエンドポイントでの検証
+                RS->>OP: イントロスペクションエンドポイントへアクセス（アクセストークン）
+                activate OP
+                OP-->>RS: イントロスペクション結果返却
+                deactivate OP
+            end
+            Note right of RS: 有効期限切れの場合はリフレッシュトークンで再取得
+            RS->>RS: API認可
+            RS->>RS: ビジネスロジック実行
+            RS->>RP: APIレスポンス
+            deactivate RS
+            deactivate RP
+            RP-->>Agent: ログイン成功後の画面表示
+            deactivate RP    
+            Agent-->>User: ログイン成功ページ表示    
+            deactivate Agent 
+        ```
 
     * RP起因のログアウト
 
-    ```mermaid
-    sequenceDiagram
-        actor User as ユーザ
-        participant Agent as User Agent(ブラウザ)
-        participant RP as Relying Party(BFF)
-        participant Session as セッション（キャッシュサービス等）    
-        participant OP as OpenID Provider(Keycloak)
-        participant RP2 as Relying Party(Other App)
+        ```mermaid
+        sequenceDiagram
+            actor User as ユーザ
+            participant Agent as User Agent(ブラウザ)
+            participant RP as Relying Party(BFF)
+            participant Session as セッション（キャッシュサービス等）    
+            participant OP as OpenID Provider(Keycloak)
+            participant RP2 as Relying Party(Other App)
 
-        User->>Agent: ログアウト要求
-        activate Agent
-        Agent->>RP: ログアウト要求
-        activate RP
-        RP->>Session: セッション削除
-        activate Session
-        Session-->>RP: セッション削除完了
-        deactivate Session
-        RP-->>Agent: OPのエンドセッションエンドポイントへリダイレクト
-        deactivate RP
-        Agent-->>OP: エンドセッションエンドポイントへ処理要求
-        activate OP
-        OP-->>RP2: 別アプリへのバックチャネルログアウトエンドポイントへアクセス
-        activate RP2
-        RP2-->>OP: バックチャネルログアウト完了
-        deactivate RP2
-        OP --> OP: SSOセッション削除
-        OP-->>Agent: RPのログアウト完了後画面へリダイレクト
-        deactivate OP
-        Agent-->>RP: RPのログアウト完了後画面表示要求
-        activate RP    
-        RP-->>Agent: RPのログアウト完了後画面表示
-        deactivate RP
-        Agent-->>User: RPのログアウト完了後画面表示
-        deactivate Agent
-
-    ```
+            User->>Agent: ログアウト要求
+            activate Agent
+            Agent->>RP: ログアウト要求
+            activate RP
+            RP->>Session: セッション削除
+            activate Session
+            Session-->>RP: セッション削除完了
+            deactivate Session
+            RP-->>Agent: OPのエンドセッションエンドポイントへリダイレクト
+            deactivate RP
+            Agent-->>OP: エンドセッションエンドポイントへ処理要求
+            activate OP
+            OP-->>RP2: 別アプリへのバックチャネルログアウトエンドポイントへアクセス
+            activate RP2
+            RP2-->>OP: バックチャネルログアウト完了
+            deactivate RP2
+            OP --> OP: SSOセッション削除
+            OP-->>Agent: RPのログアウト完了後画面へリダイレクト
+            deactivate OP
+            Agent-->>RP: RPのログアウト完了後画面表示要求
+            activate RP    
+            RP-->>Agent: RPのログアウト完了後画面表示
+            deactivate RP
+            Agent-->>User: RPのログアウト完了後画面表示
+            deactivate Agent
+        ```
 
     * バックチャネルログアウト
-    ```mermaid
-    sequenceDiagram
-        participant OP as OpenID Provider(Keycloak)
-        participant RP as Relying Party(BFF)
-        participant Session as セッション（キャッシュサービス等）            
-        
-        OP-->>RP: バックチャネルログアウト要求        
-        activate RP
-        Note right of RP: 他のアプリ側でログアウトされバックチャネルログアウト要求を受信した場合の処理
-        RP->>Session: セッション削除
-        activate Session
-        Session-->>RP: セッション削除完了
-        deactivate Session
-        RP-->>OP: バックチャネルログアウト完了
-        deactivate RP
-    ```
+    
+        ```mermaid
+        sequenceDiagram
+            participant OP as OpenID Provider(Keycloak)
+            participant RP as Relying Party(BFF)
+            participant Session as セッション（キャッシュサービス等）            
+            
+            OP-->>RP: バックチャネルログアウト要求        
+            activate RP
+            Note right of RP: 他のアプリ側でログアウトされバックチャネルログアウト要求を受信した場合の処理
+            RP->>Session: セッション削除
+            activate Session
+            Session-->>RP: セッション削除完了
+            deactivate Session
+            RP-->>OP: バックチャネルログアウト完了
+            deactivate RP
+        ```
 
 
 
@@ -276,6 +283,15 @@
     * Spring Cloud for AWSの機能を使って、Spring Actuatorで取得できるJVM等のAPのメトリクスをCloudWatchメトリクスと統合して転送できるようになっている。
 
         ![CloudWatchメトリクス統合](img/cloudwatch-metrics.png)
+
+    * CloudWatchメトリクスに転送されるAPメトリクスの例として、JVMのヒープメモリ使用量を本機能で転送される`jvm.memory.used.value`カスタムメトリクス(area=heap, idでグループ化)で可視化した例
+
+        * クラシックメトリクス
+        ![JVMヒープメモリ使用量](img/cloudwatch-metrics-graph.png)
+
+        * Query Studio
+        ![JVMヒープメモリ使用量](img/cloudwatch-metrics-graph2.png)
+
 
 * クラウドサービスのメトリックスのモニタリング
     * CloudWatch Container Insightsは有効化し、各メトリックスを可視化。
@@ -981,6 +997,10 @@ aws cloudformation create-stack --stack-name SFN-SCHEDULE-Stack --template-body 
     * ブラウザで「http://(Public ALBのDNS名)」を入力しフロントエンドAPの画面が表示される
         * CloudFormationの「ECS-SERVICE-Stack」スタックの出力「FrontendWebAppServiceURI」のURLを参照
     * アプリケーションの操作方法は「sample-bff」のリポジトリのREADME.mdを参照
+
+    * OIDCを使った外部のIDプロバイダによる認証も確認できる。
+        * 詳細は、`sample-bff`のリポジトリの[README.md](https://github.com/mysd33/sample-bff#7-oidc%E8%AA%8D%E8%A8%BC%E8%AA%8D%E5%8F%AF)を参照
+
 
 * バッチアプリケーションの確認
     * ディレード処理については、BFFアプリケーションの「Todo一括登録」を操作することで、バッチアプリケーションのジョブjob003が実行される。
