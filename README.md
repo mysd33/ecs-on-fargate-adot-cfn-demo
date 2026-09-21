@@ -171,7 +171,7 @@
             activate RP2
             RP2-->>OP: バックチャネルログアウト完了
             deactivate RP2
-            OP --> OP: SSOセッション削除
+            OP ->> OP: SSOセッション削除
             OP-->>Agent: RPのログアウト完了後画面へリダイレクト
             deactivate OP
             Agent-->>RP: RPのログアウト完了後画面表示要求
