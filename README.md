@@ -1193,6 +1193,7 @@ aws cloudformation delete-stack --stack-name ECS-SQS-Stack
 aws cloudformation delete-stack --stack-name ECS-Aurora-Stack
 aws cloudformation delete-stack --stack-name ECS-SM-Stack
 aws cloudformation delete-stack --stack-name ECS-ECACHE-Stack
+aws cloudformation delete-stack --stack-name ECS-NATGW-Stack
 aws cloudformation delete-stack --stack-name ECS-VPE-Stack 
 aws cloudformation delete-stack --stack-name ECS-SG-Stack
 aws cloudformation delete-stack --stack-name ECS-VPC-Stack
