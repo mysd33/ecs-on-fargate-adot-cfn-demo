@@ -1031,7 +1031,6 @@ aws cloudformation create-stack --stack-name SFN-SCHEDULE-Stack --template-body 
     redis6-cli -h (ElastiCacheのEndpoint) --tls
     # CloudFormationの「ECS-ECACHE-Stack」スタックの出力「ElastiCachePrimaryEndPoint」    
 
-    ```
     # セッション作成により、Redisのキーがあることを確認
     > keys * 
     ```
