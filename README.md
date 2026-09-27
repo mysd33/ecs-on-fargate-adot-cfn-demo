@@ -559,7 +559,7 @@ aws secretsmanager get-secret-value --secret-id /secrets/database-secrets
     * 作成にしばらく時間がかかる。（20分程度）
     * 最小0ACUで、[自動一時停止機能](https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/aurora-serverless-v2-auto-pause.html)を有効化にすることでコストを抑えるようにしている。
 
-* Keycloackが対応しているAurora PostgreSQLのバージョンは17.xまでのため、postgresql17をインストールするようにしている
+* Keycloakが対応しているAurora PostgreSQLのバージョンは17.xまでのため、postgresql17をインストールするようにしている
 
 ```sh
 aws cloudformation validate-template --template-body file://cfn-rds-aurora.yaml
@@ -627,7 +627,7 @@ aws cloudformation create-stack --stack-name ECS-TG-BG-Stack --template-body fil
 ```sh
 sudo dnf update -y
 
-# Keycloackが対応しているAurora PostgreSQLのバージョンは17.xまでのため、postgresql17をインストール
+# Keycloakが対応しているAurora PostgreSQLのバージョンは17.xまでのため、postgresql17をインストール
 sudo dnf install postgresql17 -y
 
 # 最新だと18まで対応しているので、Keycloakを使わないならcfn-rds-aurora.yamlの設定でpostgresql18を使用し、以下の通り18をインストールしてもよい
@@ -715,7 +715,7 @@ aws cloudformation create-stack --stack-name ECS-KEYCLOAK-Stack --template-body 
 
 ### 13.4. Keycloakの設定
 > [!WARNING]
-> 設定ファイルからインポートできる手順を検討
+> [設定ファイル](keycloak/keycloak-demo-realm.json)からインポートできる手順を整備予定
 
 * Keycloakの管理コンソールにアクセスする。
     * http://(<KeycloakのALBのDNS名>)
@@ -735,20 +735,20 @@ aws cloudformation create-stack --stack-name ECS-KEYCLOAK-Stack --template-body 
         * Username: `yamadatr`
         * Email: `yamada@xxx.co.jp`
         * First Name: `太郎`
-        * Last Name: `山田`
-    * Credentialsタブをクリックし、パスワードを設定する。
+        * Last Name: `山田`    
+    * Credentialsタブをクリックし、「Set password」をクリックしてパスワードを設定する。    
         * Password: `password`
         * Password Confirmation: `password`
-        * Temporary: OFF
+        * Temporary: Off
     * もう一度、「Create new user」をクリックして新しいユーザを作成する。
         * Username: `tamuraichr`
         * Email: `tamura@xxx.co.jp`
         * First Name: `一郎`
         * Last Name: `田村`
-    * Credentialsタブをクリックし、パスワードを設定する。
+    * Credentialsタブをクリックし、「Set password」をクリックしてパスワードを設定する。        
         * Password: `password`
         * Password Confirmation: `password`
-        * Temporary: OFF
+        * Temporary: Off
 * グループの設定
     * 左のメニューの「Groups」をクリックし、「Create group」をクリックして新しいグループを作成する。
         * Group Name: `admin`
@@ -769,7 +769,7 @@ aws cloudformation create-stack --stack-name ECS-KEYCLOAK-Stack --template-body 
         * Description: 一般ユーザロール
     * グループにロールを割り当てる
         * 左のメニューの「Groups」をクリックし、作成した`admin`グループをクリックする。
-        * 「Role Mappings」タブをクリックし、「Assign Roles」から「Realm Roles」を選択し、グループに`ADMIN`ロールを割り当てる。
+        * 「Role Mappings」タブをクリックし、「Assign role」から「Realm Roles」を選択し、グループに`ADMIN`ロールを割り当てる。
         * 同様に、作成した`general`グループにも`GENERAL`ロールを割り当てる。
 * BFFアプリケーションのクライアントを作成
     * 左のメニューの「Clients」をクリックし、「Create client」をクリックして新しいクライアントを作成する。
@@ -777,7 +777,7 @@ aws cloudformation create-stack --stack-name ECS-KEYCLOAK-Stack --template-body 
         * Client ID: `sample-bff-oidc`
         * Name: `sample-bff`
         * Client authentication: `On`
-        * Authentication flow: `Standard flow`にチェック
+        * Authentication flow: `Standard flow`にチェック（デフォルトのまま）        
         * Require PKCE: `On`
         * Root URL: `http://(BFFのALBのDNS名)`
         * Home URL: `http://(BFFのALBのDNS名)`
@@ -796,9 +796,9 @@ aws cloudformation create-stack --stack-name ECS-KEYCLOAK-Stack --template-body 
         * Backchannel Logout URL: `http://(BFFのALBのDNS名)/logout/connect/back-channel/keycloak`
             * CloudFormationの「ECS-ALB-Stack」スタックの出力「PublicALBDNS」の値を参照
             * Spring Security OAuth2.0 ClientのデフォルトのバックチャネルログアウトエンドポイントのURIは、`/logout/connect/back-channel/{registrationId}`
-* IDトークンのクレームにロールを追加する設定
+* IDトークン等のクレームにロールを追加する設定
     * 左のメニューで「Clients」をクリックし、`sample-bff-oidc`を選択
-    * 「Client scopes」タブで、「sample-bff-oidc-dedicated」を選択、「Configure a new mapper」で、「User Realm Role」を選択し、ロールをマッピングする。
+    * 「Client scopes」タブで、`sample-bff-oidc-dedicated`を選択、「Configure a new mapper」で、「User Realm Role」を選択し、ロールをマッピングする。
     * Name: `realm roles`
     * Token Claim Name: `realm_access.roles`
     * Add to ID token: `On`、Add to access token: `On`、Add to userinfo: `On`、Add to token introspection: `On`にチェックする。（デフォルトのまま）
@@ -819,9 +819,8 @@ aws cloudformation create-stack --stack-name ECS-KEYCLOAK-Stack --template-body 
         * 「Client scopes」タブをクリックし、「Add client scope」をクリックして、作成したクライアントスコープ`todo`を、Assign type 「Optional」に追加する。
     * Introspectionエンドポイントアクセス時のaudクレームの検証が通るように設定
         * 左のメニューの「Client scopes」をクリックし、`todo`を選択
-        * 「Mappers」タブをクリックし、「Add mapper」をクリックして新しいマッパーを作成する。
+        * 「Mappers」タブをクリックし、「Configure a new mapper」をクリックして「Audience」を選択し、新しいマッパーを作成する。        
             * Name: `todo-audience`
-            * Mapper Type: `Audience`
             * Included Client Audience: `sample-backend-oidc`
             * Add to access token: `On`、Add to token introspection: `On`にチェックする。（デフォルトのまま）
 
