@@ -487,20 +487,24 @@ docker push %AWS_ACCOUNT_ID%.dkr.ecr.%AWS_REGION%.amazonaws.com/fluent-bit-batch
 docker build -t fluent-bit-schedulelaunch -f DockerFileForScheduleLaunch .
 docker tag fluent-bit-schedulelaunch:latest %AWS_ACCOUNT_ID%.dkr.ecr.%AWS_REGION%.amazonaws.com/fluent-bit-schedulelaunch:latest
 docker push %AWS_ACCOUNT_ID%.dkr.ecr.%AWS_REGION%.amazonaws.com/fluent-bit-schedulelaunch:latest
+cd ..
 ```
 
 ## 5. ネットワーク環境構築
 ### 5.1. VPCおよびサブネット、Publicサブネット向けInternetGateway等の作成
+
 ```sh
-cd ..
 aws cloudformation validate-template --template-body file://cfn-vpc.yaml
 aws cloudformation create-stack --stack-name ECS-VPC-Stack --template-body file://cfn-vpc.yaml
 ```
+
 ### 5.2. Security Groupの作成
+
 ```sh
 aws cloudformation validate-template --template-body file://cfn-sg.yaml
 aws cloudformation create-stack --stack-name ECS-SG-Stack --template-body file://cfn-sg.yaml
 ```
+
 * 必要に応じて、端末の接続元IPアドレス等のパラメータを指定
     * 「--parameters ParameterKey=TerminalCidrIP,ParameterValue=X.X.X.X/X」
 
@@ -515,7 +519,7 @@ aws cloudformation create-stack --stack-name ECS-VPE-Stack --template-body file:
 
 * 本手順では、AWSの各サービスへのアクセスを極力VPC Endpoint経由で行うようにしている。
 * しかしながら、OIDC（Keycloak）を利用するにあたって、Privateサブネット上のECSのコンテナから、PublicなALBのアドレスにアクセスするために、NAT Gatewayの作成が必要になる。
-    * どうせNAT Gatewayを作成する必要があるのであれば、VPC Endpointのエンドポイント数分の時間単位課金でコストがかかる。コスト最小化だけを考えたデモであれば、NAT Gatewayだけ作成して、VPC Endpointを作成しないという選択肢もある。
+    * VPC Endpointのエンドポイント数分の時間単位課金でコストがかかることから、どうせNAT Gatewayを作成する必要があるのであれば、コスト最小化だけを考えて、NAT Gatewayだけ作成して、VPC Endpointを作成しないで動作確認するという考えもある。
 
 ```sh
 aws cloudformation validate-template --template-body file://cfn-ngw.yaml
@@ -709,12 +713,13 @@ CREATE DATABASE keycloak;
 
 ```sh
 aws cloudformation validate-template --template-body file://cfn-ecs-keycloak.yaml
-aws cloudformation create-stack --stack-name ECS-KEYCLOAK-Stack --template-body file://cfn-ecs-keycloak.yaml
+aws cloudformation create-stack --stack-name ECS-Keycloak-Stack --template-body file://cfn-ecs-keycloak.yaml
 ```
 
 ### 13.4. Keycloakの設定
-> [!WARNING]
-> [設定ファイル](keycloak/keycloak-demo-realm.json)からインポートできる手順を整備予定
+> [!NOTE]
+> レルム作成時に[設定ファイル](keycloak/keycloak-demo-realm.json)からインポートするため、ほとんどの設定手順が省略できる。
+> 省略できるものは取り消し線にしている。
 
 * Keycloakの管理コンソールにアクセスする。
     * http://(<KeycloakのALBのDNS名>)
@@ -724,104 +729,111 @@ aws cloudformation create-stack --stack-name ECS-KEYCLOAK-Stack --template-body 
         * パスワード: admin
             * CloudFormationで作成した上記の管理者ユーザは一時的な管理者ユーザであるため、継続的に利用する場合は、恒久的な管理者ユーザを作成し、一時的な管理者ユーザを削除する。
 
-* レルムを作成    
+* レルムを作成
     * 左のメニューの「Manage realms」をクリックし、「Create realm」をクリックして新しいレルムを作成する。
-        * Realm name: `demo`
-    * レルムがdemoに切り替わったら、左のメニューの「Realm settings」をクリックし、「Display name」を設定する。
-        * Display name: `サンプルシステム`
-* ユーザを作成
-    * 左のメニューの「Users」をクリックし、「Create new user」をクリックして新しいユーザを作成する。
-        * Username: `yamadatr`
-        * Email: `yamada@xxx.co.jp`
-        * First Name: `太郎`
-        * Last Name: `山田`    
-    * Credentialsタブをクリックし、「Set password」をクリックしてパスワードを設定する。    
-        * Password: `password`
-        * Password Confirmation: `password`
-        * Temporary: Off
-    * もう一度、「Create new user」をクリックして新しいユーザを作成する。
-        * Username: `tamuraichr`
-        * Email: `tamura@xxx.co.jp`
-        * First Name: `一郎`
-        * Last Name: `田村`
-    * Credentialsタブをクリックし、「Set password」をクリックしてパスワードを設定する。        
-        * Password: `password`
-        * Password Confirmation: `password`
-        * Temporary: Off
-* グループの設定
-    * 左のメニューの「Groups」をクリックし、「Create group」をクリックして新しいグループを作成する。
-        * Group Name: `admin`
-        * Description: 管理者グループ
-    * Membersタブをクリックし、「Add member」をクリックし、作成したユーザをグループに割り当てる。
-        * adminグループに、ユーザ`yamadatr`を割り当てる。
-    * もう一度、「Create group」をクリックして新しいグループを作成する。
-        * Group Name: `general`
-        * Description: 一般ユーザグループ
-    * Membersタブをクリックし、「Add member」をクリックし、作成したユーザをグループに割り当てる。
-        * generalグループに、ユーザ`tamuraichr`を割り当てる。
-* ロールの設定
-    * 左のメニューの「Realm roles」をクリックし、「Create Role」をクリックして新しいロールを作成する。
-        * Role Name: `ADMIN`
-        * Description: 管理者ロール
-    * もう一度、「Create Role」をクリックして新しいロールを作成する。
-        * Role Name: `GENERAL`
-        * Description: 一般ユーザロール
-    * グループにロールを割り当てる
-        * 左のメニューの「Groups」をクリックし、作成した`admin`グループをクリックする。
-        * 「Role Mappings」タブをクリックし、「Assign role」から「Realm Roles」を選択し、グループに`ADMIN`ロールを割り当てる。
-        * 同様に、作成した`general`グループにも`GENERAL`ロールを割り当てる。
-* BFFアプリケーションのクライアントを作成
-    * 左のメニューの「Clients」をクリックし、「Create client」をクリックして新しいクライアントを作成する。
-        * Client Type: `OpenID Connect`
-        * Client ID: `sample-bff-oidc`
-        * Name: `sample-bff`
-        * Client authentication: `On`
-        * Authentication flow: `Standard flow`にチェック（デフォルトのまま）        
-        * Require PKCE: `On`
+        * Resource file: `keycloak/keycloak-demo-realm.json`
+            * [レルムdemoの設定ファイル(keycloak/keycloak-demo-realm.json)](keycloak/keycloak-demo-realm.json)の内容をインポートする。
+        * ~~Realm name: `demo`~~
+    * ~~レルムがdemoに切り替わったら、左のメニューの「Realm settings」をクリックし、「Display name」を設定する。~~
+        * ~~Display name: `サンプルシステム`~~
+* ~~ユーザを作成~~
+    * ~~左のメニューの「Users」をクリックし、「Create new user」をクリックして新しいユーザを作成する。~~
+        * ~~Username: `yamadatr`~~
+        * ~~Email: `yamada@xxx.co.jp`~~
+        * ~~First Name: `太郎`~~
+        * ~~Last Name: `山田`~~    
+    * ~~Credentialsタブをクリックし、「Set password」をクリックしてパスワードを設定する。~~    
+        * ~~Password: `password`~~
+        * ~~Password Confirmation: `password`~~
+        * ~~Temporary: Off~~
+    * ~~もう一度、「Create new user」をクリックして新しいユーザを作成する。~~
+        * ~~Username: `tamuraichr`~~
+        * ~~Email: `tamura@xxx.co.jp`~~
+        * ~~First Name: `一郎`~~
+        * ~~Last Name: `田村`~~
+    * ~~Credentialsタブをクリックし、「Set password」をクリックしてパスワードを設定する。 ~~
+        * ~~Password: `password`~~
+        * ~~Password Confirmation: `password`~~
+        * ~~Temporary: Off~~
+* ~~グループの設定~~
+    * ~~左のメニューの「Groups」をクリックし、「Create group」をクリックして新しいグループを作成する。~~
+        * ~~Group Name: `admin`~~
+        * ~~Description: 管理者グループ~~
+    * ~~Membersタブをクリックし、「Add member」をクリックし、作成したユーザをグループに割り当てる。~~
+        * ~~adminグループに、ユーザ`yamadatr`を割り当てる。~~
+    * ~~もう一度、「Create group」をクリックして新しいグループを作成する。
+        * ~~Group Name: `general`~~
+        * ~~Description: 一般ユーザグループ~~
+    * ~~Membersタブをクリックし、「Add member」をクリックし、作成したユーザをグループに割り当てる。~~
+        * ~~generalグループに、ユーザ`tamuraichr`を割り当てる。~~
+* ~~ロールの設定~~
+    * ~~左のメニューの「Realm roles」をクリックし、「Create Role」をクリックして新しいロールを作成する。~~
+        * ~~Role Name: `ADMIN`~~
+        * ~~Description: 管理者ロール~~
+    * ~~もう一度、「Create Role」をクリックして新しいロールを作成する。~~
+        * ~~Role Name: `GENERAL`~~
+        * ~~Description: 一般ユーザロール~~
+    * ~~グループにロールを割り当てる~~
+        * ~~左のメニューの「Groups」をクリックし、作成した`admin`グループをクリックする。~~
+        * ~~「Role Mappings」タブをクリックし、「Assign role」から「Realm Roles」を選択し、グループに`ADMIN`ロールを割り当てる。~~
+        * ~~同様に、作成した`general`グループにも`GENERAL`ロールを割り当てる。~~
+* BFFアプリケーションのクライアントの設定を~~作成~~更新
+    * 左のメニューの「Clients」をクリックし、`sample-bff-oidc`を選択する。
+    * ~~左のメニューの「Clients」をクリックし、「Create client」をクリックして新しいクライアントを作成する。~~
+    * 「Settings」タブで必要な設定を行う。
+        * ~~Client Type: `OpenID Connect`~~
+        * ~~Client ID: `sample-bff-oidc`~~
+        * ~~Name: `sample-bff`~~
+        * ~~Client authentication: `On`~~
+        * ~~Authentication flow: `Standard flow`にチェック（デフォルトのまま）~~        
+        * ~~Require PKCE: `On`~~
         * Root URL: `http://(BFFのALBのDNS名)`
         * Home URL: `http://(BFFのALBのDNS名)`
             * CloudFormationの「ECS-ALB-Stack」スタックの出力「PublicALBDNS」の値を参照
         * Valid Redirect URIs: `http://(BFFのALBのDNS名)/login/oauth2/code/keycloak`
-            * Spring Security OAuth2.0 ClientのデフォルトのリダイレクトエンドポイントのURIは、
-                `/login/oauth2/code/{registrationId}`
+            * Spring Security OAuth2.0 ClientのデフォルトのリダイレクトエンドポイントのURIは、`/login/oauth2/code/{registrationId}`
         * Valid post logout redirect URIs: `http://(BFFのALBのDNS名)/`
-    * 作成したクライアントの設定画面で、「Credentials」タブをクリックし、クライアントシークレットを確認する。
-* ログイン成功後の同意画面の表示を有効化
-    * 「Settings」タブの「Login Settings」セクションで以下の設定
-        * Consent Required: `On`
+        * Admin URL: `http://(BFFのALBのDNS名)/`
+    * ~~作成した~~クライアントの設定画面で、「Credentials」タブをクリックし、クライアントシークレットを確認する。
+        * インポートしたときのシークレットの値であるため、Regenerateをクリックして新しいクライアントシークレットを生成する。
+* ~~ログイン成功後の同意画面の表示を有効化~~
+    * ~~「Settings」タブの「Login Settings」セクションで以下の設定~~
+        * ~~Consent Required: `On`~~
 * バックチャネルログアウトの設定
     * 「Settings」タブの「Logout Settings」セクションで以下の設定
-        * Front channel logout: `Off`
+        * ~~Front channel logout: `Off`~~
         * Backchannel Logout URL: `http://(BFFのALBのDNS名)/logout/connect/back-channel/keycloak`
             * CloudFormationの「ECS-ALB-Stack」スタックの出力「PublicALBDNS」の値を参照
             * Spring Security OAuth2.0 ClientのデフォルトのバックチャネルログアウトエンドポイントのURIは、`/logout/connect/back-channel/{registrationId}`
-* IDトークン等のクレームにロールを追加する設定
-    * 左のメニューで「Clients」をクリックし、`sample-bff-oidc`を選択
-    * 「Client scopes」タブで、`sample-bff-oidc-dedicated`を選択、「Configure a new mapper」で、「User Realm Role」を選択し、ロールをマッピングする。
-    * Name: `realm roles`
-    * Token Claim Name: `realm_access.roles`
-    * Add to ID token: `On`、Add to access token: `On`、Add to userinfo: `On`、Add to token introspection: `On`にチェックする。（デフォルトのまま）
-* Backendアプリケーションのクライアントを作成
-    * Introspection エンドポイントを利用して、アクセストークンの検証を行うため、Backendアプリケーションのクライアントを作成する。
-    * 左のメニューの「Clients」をクリックし、「Create client」をクリックして新しいクライアントを作成する。
-        * Client Type: `OpenID Connect`
-        * Client ID: `sample-backend-oidc`
-        * Name: `sample-backend`
-        * Client authentication: `On`
-        * Authentication flow: 全てチェックを外す
-* スコープの追加
-    * バックエンドのTodo APIへのアクセスを許可するためのスコープ`todo`を追加する。
-        * 左のメニューの「Client scopes」をクリックし、「Create client scope」をクリックして新しいクライアントスコープを作成する。
-            * Name: `todo`
-            * Include in token scope: `On`
-        * 左のメニューの「Clients」をクリックし、`sample-bff-oidc`を選択
-        * 「Client scopes」タブをクリックし、「Add client scope」をクリックして、作成したクライアントスコープ`todo`を、Assign type 「Optional」に追加する。
-    * Introspectionエンドポイントアクセス時のaudクレームの検証が通るように設定
-        * 左のメニューの「Client scopes」をクリックし、`todo`を選択
-        * 「Mappers」タブをクリックし、「Configure a new mapper」をクリックして「Audience」を選択し、新しいマッパーを作成する。        
-            * Name: `todo-audience`
-            * Included Client Audience: `sample-backend-oidc`
-            * Add to access token: `On`、Add to token introspection: `On`にチェックする。（デフォルトのまま）
+* ~~IDトークン等のクレームにロールを追加する設定~~
+    * ~~左のメニューで「Clients」をクリックし、`sample-bff-oidc`を選択~~
+    * ~~「Client scopes」タブで、`sample-bff-oidc-dedicated`を選択、「Configure a new mapper」で、「User Realm Role」を選択し、ロールをマッピングする。~~
+    * ~~Name: `realm roles`~~
+    * ~~Token Claim Name: `realm_access.roles`~~
+    * ~~Add to ID token: `On`、Add to access token: `On`、Add to userinfo: `On`、Add to token introspection: `On`にチェックする。（デフォルトのまま）~~
+* Backendアプリケーションのクライアントの設定を~~作成~~確認
+    * ~~Introspection エンドポイントを利用して、アクセストークンの検証を行うため、Backendアプリケーションのクライアントを作成する。~~
+    * ~~左のメニューの「Clients」をクリックし、「Create client」をクリックして新しいクライアントを作成する。~~
+        * ~~Client Type: `OpenID Connect`~~
+        * ~~Client ID: `sample-backend-oidc`~~
+        * ~~Name: `sample-backend`~~
+        * ~~Client authentication: `On`~~
+        * ~~Authentication flow: 全てチェックを外す~~
+    * 作成したクライアントの設定画面で、「Credentials」タブをクリックし、クライアントシークレットを確認する。
+        * インポートしたときのシークレットの値であるため、Regenerateをクリックして新しいクライアントシークレットを生成する。        
+* ~~スコープの追加~~
+    * ~~バックエンドのTodo APIへのアクセスを許可するためのスコープ`todo`を追加する。~~
+        * ~~左のメニューの「Client scopes」をクリックし、「Create client scope」をクリックして新しいクライアントスコープを作成する。~~
+            * ~~Name: `todo`~~
+            * ~~Include in token scope: `On`~~
+        * ~~左のメニューの「Clients」をクリックし、`sample-bff-oidc`を選択~~
+        * ~~「Client scopes」タブをクリックし、「Add client scope」をクリックして、作成したクライアントスコープ`todo`を、Assign type 「Optional」に追加する。~~
+    * ~~Introspectionエンドポイントアクセス時のaudクレームの検証が通るように設定~~
+        * ~~左のメニューの「Client scopes」をクリックし、`todo`を選択~~
+        * ~~「Mappers」タブをクリックし、「Configure a new mapper」をクリックして「Audience」を選択し、新しいマッパーを作成する。        ~~
+            * ~~Name: `todo-audience`~~
+            * ~~Included Client Audience: `sample-backend-oidc`~~
+            * ~~Add to access token: `On`、Add to token introspection: `On`にチェックする。（デフォルトのまま）~~
 
 ### 13.5. GitHubの設定
 * GitHubアカウントを作成
@@ -998,8 +1010,8 @@ aws cloudformation create-stack --stack-name SFN-SCHEDULE-Stack --template-body 
 
     * OIDCを使った外部のIDプロバイダによる認証も確認できる。
         * 詳細は、`sample-bff`のリポジトリの[README.md](https://github.com/mysd33/sample-bff#7-oidc%E8%AA%8D%E8%A8%BC%E8%AA%8D%E5%8F%AF)を参照
-
-
+        * トップ画面から「外部のIDプロバイダでログイン」をクリックして、OIDC認証を行うことができる。
+        * Keycloakの場合にバックチャネルログアウトの挙動を試したい場合は、ブラウザの別タブで、`http://（Keycloakのホスト名）/realms/demo/account`にアクセスする。右上のユーザ名をクリックし「Sign out」を実行する。
 * バッチアプリケーションの確認
     * ディレード処理については、BFFアプリケーションの「Todo一括登録」を操作することで、バッチアプリケーションのジョブjob003が実行される。
         * アプリケーションの操作方法は「sample-batch」のリポジトリのREADME.mdを参照
@@ -1202,7 +1214,7 @@ aws cloudformation delete-stack --stack-name ECS-TASK-Stack
 aws cloudformation delete-stack --stack-name ECS-CLUSTER-Stack
 aws cloudformation delete-stack --stack-name ECS-SSM-PARAM-Stack
 aws cloudformation delete-stack --stack-name ECS-SECRETS-OIDC-Stack
-aws cloudformation delete-stack --stack-name ECS-KEYCLOAK-Stack
+aws cloudformation delete-stack --stack-name ECS-Keycloak-Stack
 
 aws cloudformation delete-stack --stack-name ECS-TG-BG-Stack
 aws cloudformation delete-stack --stack-name ECS-ALB-Stack
