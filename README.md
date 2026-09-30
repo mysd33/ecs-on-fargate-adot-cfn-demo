@@ -46,7 +46,7 @@
     * 対応する各ジョブのアプリケーションは [sample-batch-jobflow](https://github.com/mysd33/sample-batch-jobflow)のソースコード確認するとよい。
 
 * [Jobflow900](sfn/jobflow900.asl.yaml)
-    * シンプルなジョブの順序実行の例
+    * Choiceを使った分岐を含む、シンプルなジョブの順序実行の例
 
     ![ジョブフロー900](img/jobflow900.png)
 
@@ -847,7 +847,7 @@ aws cloudformation create-stack --stack-name ECS-Keycloak-Stack --template-body 
 * クライアントシークレットを生成
     * Client secretsの「Generate a new client secret」をクリックして、クライアントシークレットを生成する。
 
-###  13.6. Googleの設定
+### 13.6. Googleの設定
 * Googleアカウントを作成
 * [Google API Console](https://console.developers.google.com/)で、「OAuth同意画面」を作成。
 * Google API ConsoleのOAuth同意画面の[クライアント](https://console.cloud.google.com/auth/clients)のメニューを選択し、OAuth 2.0 クライアント IDの画面「＋クライアントを作成」から「OAuth 2.0 クライアントID」を作成

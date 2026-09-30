@@ -24,6 +24,11 @@ Parameters:
 Resources: 
   Job900Flow:
     Type: AWS::StepFunctions::StateMachine
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Provides the Jobflow900 Step Functions sample for orchestrating AWS Batch jobs.
+        must: []
+        mutable: review-required
     Properties: 
       StateMachineName: !Sub ${StackPrefix}-Job900Flow
       RoleArn: 
@@ -38,12 +43,20 @@ Resources:
         job902_job_definition_arn:
           Fn::ImportValue:
             Fn::Sub: ${StackPrefix}-BatchJobDefinition-Arn
+        job903_job_definition_arn:
+          Fn::ImportValue:
+            Fn::Sub: ${StackPrefix}-BatchJobDefinition-Arn
         job_queue_arn:
           Fn::ImportValue:
             Fn::Sub: ${StackPrefix}-JobQueue-Arn
 
   Job910Flow:
     Type: AWS::StepFunctions::StateMachine
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Provides the Jobflow910 Step Functions sample for orchestrating AWS Batch jobs.
+        must: []
+        mutable: review-required
     Properties:
       StateMachineName: !Sub ${StackPrefix}-Job910Flow
       RoleArn:
@@ -67,6 +80,11 @@ Resources:
 
   Job920Flow:
     Type: AWS::StepFunctions::StateMachine
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Provides the Jobflow920 Step Functions sample for orchestrating AWS Batch jobs.
+        must: []
+        mutable: review-required
     Properties:
       StateMachineName: !Sub ${StackPrefix}-Job920Flow
       RoleArn:

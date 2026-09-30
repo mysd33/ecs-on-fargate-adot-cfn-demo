@@ -19,7 +19,7 @@ States:
                 Environment:
                   - Name: TASK_TOKEN
                     Value: "{% $states.context.Task.Token %}"
-    Next: Job902
+    Next: CheckJob901Result
     Output:
       job901Result: "{% $states.result %}"
     Retry:
@@ -29,6 +29,12 @@ States:
         IntervalSeconds: 10
         MaxAttempts: 3
         JitterStrategy: FULL
+  CheckJob901Result:
+    Type: Choice
+    Choices:
+      - Condition: "{% $states.input.job901Result.result %}"
+        Next: Job902
+    Default: Job903
   Job902:
     Type: Task
     Resource: arn:aws:states:::batch:submitJob.sync
@@ -42,6 +48,33 @@ States:
               - Name: batch-jobflow
                 Command:
                   - --spring.batch.job.name=job902
+                  - "{% 'inputData=' & $states.input.job901Result %}"
+                  - "{% 'executionId=' &
+                    $states.context.Execution.Input.executionId %}"
+                Environment:
+                  - Name: TASK_TOKEN
+                    Value: "{% $states.context.Task.Token %}"
+    End: true
+    Retry:
+      - ErrorEquals:
+          - Batch.ServerException
+        BackoffRate: 2
+        IntervalSeconds: 10
+        MaxAttempts: 3
+        JitterStrategy: FULL
+  Job903:
+    Type: Task
+    Resource: arn:aws:states:::batch:submitJob.sync
+    Arguments:
+      JobName: job903
+      JobDefinition: ${job903_job_definition_arn}
+      JobQueue: ${job_queue_arn}
+      EcsPropertiesOverride:
+        TaskProperties:
+          - Containers:
+              - Name: batch-jobflow
+                Command:
+                  - --spring.batch.job.name=job903
                   - "{% 'inputData=' & $states.input.job901Result %}"
                   - "{% 'executionId=' &
                     $states.context.Execution.Input.executionId %}"
