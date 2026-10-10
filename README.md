@@ -562,7 +562,7 @@ aws secretsmanager get-secret-value --secret-id /secrets/database-secrets
     * 作成にしばらく時間がかかる。（20分程度）
     * 最小0ACUで、[自動一時停止機能](https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/aurora-serverless-v2-auto-pause.html)を有効化にすることでコストを抑えるようにしている。
 
-* Keycloakが対応しているAurora PostgreSQLのバージョンは17.xまでのため、postgresql17をインストールするようにしている
+* [Keycloakが対応しているAurora PostgreSQLのバージョン](https://www.keycloak.org/server/db#_supported_databases)は17.xまでのため、postgresql17をインストールするようにしている
 
 ```sh
 aws cloudformation validate-template --template-body file://cfn-rds-aurora.yaml
@@ -787,8 +787,8 @@ aws cloudformation create-stack --stack-name ECS-Keycloak-Stack --template-body 
         * ~~Client authentication: `On`~~
         * ~~Authentication flow: `Standard flow`にチェック（デフォルトのまま）~~        
         * ~~Require PKCE: `On`~~
-        * Root URL: `http://(BFFのALBのDNS名)`
-        * Home URL: `http://(BFFのALBのDNS名)`
+        * Root URL: `http://(BFFのALBのDNS名)/`
+        * Home URL: `http://(BFFのALBのDNS名)/`
             * CloudFormationの「ECS-ALB-Stack」スタックの出力「PublicALBDNS」の値を参照
         * Valid Redirect URIs: `http://(BFFのALBのDNS名)/login/oauth2/code/keycloak`
             * Spring Security OAuth2.0 ClientのデフォルトのリダイレクトエンドポイントのURIは、`/login/oauth2/code/{registrationId}`
@@ -868,7 +868,9 @@ set GITHUB_CLIENT_ID=XXXX
 set GITHUB_CLIENT_SECRET=XXXX
 set GOOGLE_CLIENT_ID=XXXX
 set GOOGLE_CLIENT_SECRET=XXXX
+```
 
+```sh
 aws cloudformation validate-template --template-body file://cfn-secrets-oidc.yaml
 aws cloudformation create-stack --stack-name ECS-SECRETS-OIDC-Stack --template-body file://cfn-secrets-oidc.yaml --parameters ParameterKey=KeycloakRPClientId,ParameterValue=%KEYCLOAK_RP_CLIENT_ID% ParameterKey=KeycloakRPClientSecret,ParameterValue=%KEYCLOAK_RP_CLIENT_SECRET% ParameterKey=KeycloakRSClientId,ParameterValue=%KEYCLOAK_RS_CLIENT_ID% ParameterKey=KeycloakRSClientSecret,ParameterValue=%KEYCLOAK_RS_CLIENT_SECRET% ParameterKey=GitHubClientId,ParameterValue=%GITHUB_CLIENT_ID% ParameterKey=GitHubClientSecret,ParameterValue=%GITHUB_CLIENT_SECRET% ParameterKey=GoogleClientId,ParameterValue=%GOOGLE_CLIENT_ID% ParameterKey=GoogleClientSecret,ParameterValue=%GOOGLE_CLIENT_SECRET%
 ```
