@@ -37,10 +37,6 @@ Parameters:
     Description: Backend Sidecar Fluent Bit Repository Name
     Type: String
     Default: fluent-bit-backend
-  BatchJobflowFluentBitRepositoryName:
-    Description: Batch Job Flow Sidecar Fluent Bit Repository Name
-    Type: String
-    Default: fluent-bit-batch-jobflow
   BatchFluentBitRepositoryName:
     Description: Batch Sidecar Fluent Bit Repository Name
     Type: String
@@ -49,6 +45,10 @@ Parameters:
     Description: ScheduleLaunch Sidecar Fluent Bit Repository Name
     Type: String
     Default: fluent-bit-schedulelaunch    
+  BatchJobflowFluentBitRepositoryName:
+    Description: Batch Job Flow Sidecar Fluent Bit Repository Name
+    Type: String
+    Default: fluent-bit-batch-jobflow
   AdotCollectorRepositoryName:
     Description: ADOT Collector Repository Name
     Type: String
@@ -225,6 +225,14 @@ Outputs:
     Value: !GetAtt ScheduleLaunchFluentBitECRRepository.RepositoryUri
     Export:
       Name: !Sub ${StackPrefix}-ScheduleLaunchFluentBitECRRepositoryUri  
+  BatchJobflowFluentBitECRRepositoryArn:
+    Description: Batch Job Flow Fluent Bit Repository Arn
+    Value: !GetAtt BatchJobflowFluentBitECRRepository.Arn    
+  BatchJobflowFluentBitECRRepositoryUri:
+    Description: Batch Job Flow Fluent Bit Repository URI
+    Value: !GetAtt BatchJobflowFluentBitECRRepository.RepositoryUri
+    Export:
+      Name: !Sub ${StackPrefix}-BatchJobflowFluentBitECRRepositoryUri
   AdotCollectorECRRepositoryArn:  
     Description: ADOT Collector Repository Arn
     Value: !GetAtt AdotCollectorECRRepository.Arn    

@@ -466,7 +466,6 @@ docker push %AWS_ACCOUNT_ID%.dkr.ecr.%AWS_REGION%.amazonaws.com/aws-otel-collect
 * ログ転送にFireLensを利用する場合、サイドカーコンテナで使用するFluent BitのDockerイメージをビルドし、ECRにイメージをプッシュする。
 * 以下、コマンドを実行
 ```sh
-cd ..
 cd firelens
 
 docker build -t fluent-bit-bff -f DockerFileForBff .
@@ -487,8 +486,14 @@ docker push %AWS_ACCOUNT_ID%.dkr.ecr.%AWS_REGION%.amazonaws.com/fluent-bit-batch
 docker build -t fluent-bit-schedulelaunch -f DockerFileForScheduleLaunch .
 docker tag fluent-bit-schedulelaunch:latest %AWS_ACCOUNT_ID%.dkr.ecr.%AWS_REGION%.amazonaws.com/fluent-bit-schedulelaunch:latest
 docker push %AWS_ACCOUNT_ID%.dkr.ecr.%AWS_REGION%.amazonaws.com/fluent-bit-schedulelaunch:latest
+```
+```sh
+docker build -t fluent-bit-batch-jobflow -f DockerFileForBatchJobflow .
+docker tag fluent-bit-batch-jobflow:latest %AWS_ACCOUNT_ID%.dkr.ecr.%AWS_REGION%.amazonaws.com/fluent-bit-batch-jobflow:latest
+docker push %AWS_ACCOUNT_ID%.dkr.ecr.%AWS_REGION%.amazonaws.com/fluent-bit-batch-jobflow:latest
 cd ..
 ```
+
 
 ## 5. ネットワーク環境構築
 ### 5.1. VPCおよびサブネット、Publicサブネット向けInternetGateway等の作成
@@ -949,10 +954,11 @@ aws cloudformation create-stack --stack-name AWS-BATCH-Stack --template-body fil
 ```
 
 ##### 15.5.1.2. カスタムログルーティング（FireLens + Fluent Bit）の場合
-* TBD: 今後作成予定
+* awsfirelensドライバのタスク定義を作成
 
 ```sh
-TBD
+aws cloudformation validate-template --template-body file://cfn-awsbatch-firelens.yaml
+aws cloudformation create-stack --stack-name AWS-BATCH-Stack --template-body file://cfn-awsbatch-firelens.yaml
 ```
 
 #### 15.5.2. StepFunctionsのステートマシンの作成
