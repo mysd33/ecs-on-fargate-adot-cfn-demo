@@ -17,6 +17,10 @@ Parameters:
     AllowedValues: ["Dev", "Staging", "Production"]
     Default: Production
     ConstraintDescription: must be a prod or test
+  ContainerName:
+    Description: Container Name for Batch Application
+    Type: String
+    Default: batch-jobflow
   ContainerImageTag:
     Description: Container Image Tag for Batch Job. ECR Repository is created in cfn-ecr.yaml.
     Type: String
@@ -30,7 +34,7 @@ Mappings:
       "Memory" : 2048
       "AdotVcpus" : 1
       "AdotMemory" : 2048
-      "MaxVcpus" : 4
+      "MaxVcpus" : 16
       "Profile" : "production,log_container"
     Staging:
       "ContainerImage" : "sample-batch-jobflow"
@@ -38,7 +42,7 @@ Mappings:
       "Memory" : 2048
       "AdotVcpus" : 1
       "AdotMemory" : 2048
-      "MaxVcpus" : 4
+      "MaxVcpus" : 16
       "Profile" : "production,log_container"
     Dev:      
       "ContainerImage" : "sample-batch-jobflow"
@@ -46,7 +50,7 @@ Mappings:
       "Memory" : 2048
       "AdotVcpus" : 1
       "AdotMemory" : 2048
-      "MaxVcpus" : 4
+      "MaxVcpus" : 16
       "Profile" : "production,log_container"
     # TODO : Add Configuration for each environment if needed
 
@@ -108,7 +112,7 @@ Resources:
             Volumes:
               - Name: tmp                 
             Containers:              
-              - Name: batch-jobflow
+              - Name: !Ref ContainerName
                 # Command is overridden at runtime, by step function state machinde definition
                 Command: ["--spring.batch.job.name=job901", "inputData=input901"]
                 Image:
@@ -195,5 +199,10 @@ Outputs:
     Value: !Ref BatchJobDefinition
     Export:
       Name: !Sub "${StackPrefix}-BatchJobDefinition-Arn"
+  BatchJobContainerName:
+    Description: "Container Name for Batch Application"
+    Value: !Ref ContainerName
+    Export:
+      Name: !Sub "${StackPrefix}-BatchJobContainerName"
 
   

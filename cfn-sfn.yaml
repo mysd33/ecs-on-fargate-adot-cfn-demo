@@ -49,6 +49,9 @@ Resources:
         job_queue_arn:
           Fn::ImportValue:
             Fn::Sub: ${StackPrefix}-JobQueue-Arn
+        container_name:
+          Fn::ImportValue:
+            Fn::Sub: ${StackPrefix}-BatchJobContainerName
 
   Job910Flow:
     Type: AWS::StepFunctions::StateMachine
@@ -77,6 +80,9 @@ Resources:
         job_queue_arn:
           Fn::ImportValue:
             Fn::Sub: ${StackPrefix}-JobQueue-Arn
+        container_name:
+          Fn::ImportValue:
+            Fn::Sub: ${StackPrefix}-BatchJobContainerName
 
   Job920Flow:
     Type: AWS::StepFunctions::StateMachine
@@ -105,6 +111,9 @@ Resources:
         job_queue_arn:
           Fn::ImportValue:
             Fn::Sub: ${StackPrefix}-JobQueue-Arn
+        container_name:
+          Fn::ImportValue:
+            Fn::Sub: ${StackPrefix}-BatchJobContainerName
 
 Outputs:
   Job900FlowArn:
